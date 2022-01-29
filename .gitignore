@@ -1,2 +1,7 @@
 target/
 build/
+deps/
+
+# IDE
+.vscode
+.idea

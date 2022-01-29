@@ -28,7 +28,7 @@ impl Build {
         // let asm = "";
         // let ld = "";
 
-        match arch {
+        let res = match arch {
             Arch::Riscv64 => {
                 Build{
                     assembler: RISCV64_AS.to_string(),
@@ -41,12 +41,25 @@ impl Build {
                     linker: AARCH64_LD.to_string()
                 }
             }
-        }
+        };
+
+        // remove previous build, assumed build/
+        res.clean();
+        // create a new build dir
+        res.create_build();
+
+        res
     }
 
-    // .args([self.assembler, "-c", asm_file, output_file])
-            // .arg("-c")
-    
+    fn create_build(&self) -> &Self {
+        Command::new("mkdir")
+            .arg("build")
+            .output()
+            .expect("failed to execute process");
+        
+        self
+    }
+
     pub fn assemble(&self, asm_file: &str, output_file: &str) -> &Self {
         // assemble the file to an output file
         let output = Command::new(&self.assembler)
@@ -101,13 +114,22 @@ const AARCH64_AS: &str = "aarch64-none-elf-as";
 const AARCH64_LD: &str = "aarch64-none-elf-ld";
  
 #[test]
-fn test_build() {
+fn test_build_basic() {
     let build = Build::new(Arch::Riscv64);
     // compile boot.S. (! should auto convert {...}.s to {...}.o using prefixing)
     build.assemble("asm/riscv64/boot.S", "build/boot.o");
+    
     // should be specifying the staticlib as well, can get it from Cargo.toml or the API
-    build.link(&["build.o"], "link/riscv64/linker.ld", "kernel.elf");
+    build.link(&["build/boot.o", "deps/libneutronkern.a"], "link/riscv64/linker.ld", "build/kernel.elf");
 
     // cleanup
     build.clean();
+}
+
+#[test]
+fn test_build_basic_chain() {
+    let build = Build::new(Arch::Riscv64);
+    build.assemble("asm/riscv64/boot.S", "build/boot.o")
+        .link(&["build/boot.o", "deps/libneutronkern.a"], "link/riscv64/linker.ld", "build/kernel.elf")
+        .clean();
 }
