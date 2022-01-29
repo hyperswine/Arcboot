@@ -12,6 +12,8 @@ use std::{vec, vec::Vec};
 
 // API
 
+pub mod bootimg;
+
 pub enum Arch {
     Riscv64, Aarch64
 }
@@ -58,6 +60,10 @@ impl Build {
             .expect("failed to execute process");
         
         self
+    }
+
+    pub fn rust_build(&self, output_dir: &str) -> &Self {
+
     }
 
     pub fn assemble(&self, asm_file: &str, output_file: &str) -> &Self {
@@ -118,7 +124,7 @@ fn test_build_basic() {
     let build = Build::new(Arch::Riscv64);
     // compile boot.S. (! should auto convert {...}.s to {...}.o using prefixing)
     build.assemble("asm/riscv64/boot.S", "build/boot.o");
-    
+
     // should be specifying the staticlib as well, can get it from Cargo.toml or the API
     build.link(&["build/boot.o", "deps/libneutronkern.a"], "link/riscv64/linker.ld", "build/kernel.elf");
 
@@ -132,4 +138,27 @@ fn test_build_basic_chain() {
     build.assemble("asm/riscv64/boot.S", "build/boot.o")
         .link(&["build/boot.o", "deps/libneutronkern.a"], "link/riscv64/linker.ld", "build/kernel.elf")
         .clean();
+}
+
+// API
+
+// MAYBE make this an executable and specify the output dir in [deps] or config.toml
+// two commands, `cargo arcbuild` to make the bootable image from the kernel crate and the other boot/linker scripts.
+// `cargo arctest spectro` to run qemu with settings for riscv64 and cfg(test). Maybe cargo run --test would work or cargo build --test then qemu on the image
+
+// args: pass a expect() object in from the build command
+// TODO: better idea, specify the output dir of the full kernel staticlib
+pub fn full_build(staticlib_dir: &str, arch: Arch) {
+    println!("status: {}", build_cmd.status);
+    assert!(build_cmd.status.success());
+
+    // build riscv
+    match arch {
+        Arch::Riscv64 => {
+            let build = Build::new(Arch::Riscv64);
+            build.assemble("asm/riscv64/boot.S", "build/boot.o")
+                .link(&["build/boot.o", "build/rust/*.a"], "link/riscv64/linker.ld", "build/kernel.elf");
+        }
+    }
+    
 }
