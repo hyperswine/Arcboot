@@ -2,6 +2,12 @@
 name = "arcboot"
 version = "0.1.0"
 edition = "2021"
+description = "An executable tool for building rust-based kernels and compiling, assembling and linking any extra dependencies"
+
+exclude = [
+    "archive/*",
+    "examples/*",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
