@@ -1,6 +1,6 @@
 [package]
 name = "arcboot"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "An executable tool for building rust-based kernels and compiling, assembling and linking any extra dependencies"
 license = "BSD-3-Clause"
