@@ -62,8 +62,10 @@ impl Build {
         self
     }
 
+    // build the kernel
     pub fn rust_build(&self, output_dir: &str) -> &Self {
 
+        self
     }
 
     pub fn assemble(&self, asm_file: &str, output_file: &str) -> &Self {
@@ -149,15 +151,15 @@ fn test_build_basic_chain() {
 // args: pass a expect() object in from the build command
 // TODO: better idea, specify the output dir of the full kernel staticlib
 pub fn full_build(staticlib_dir: &str, arch: Arch) {
-    println!("status: {}", build_cmd.status);
-    assert!(build_cmd.status.success());
-
     // build riscv
     match arch {
         Arch::Riscv64 => {
             let build = Build::new(Arch::Riscv64);
             build.assemble("asm/riscv64/boot.S", "build/boot.o")
                 .link(&["build/boot.o", "build/rust/*.a"], "link/riscv64/linker.ld", "build/kernel.elf");
+        }
+        Arch::Aarch64 => {
+            
         }
     }
     

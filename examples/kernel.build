@@ -1,0 +1,5 @@
+# kernel build environment
+
+OUT_DIR=examples/build
+ASM_FILES="examples/asm/boot.S"
+LINK_SCRIPT="examples/link/linker.ld"
