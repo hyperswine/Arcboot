@@ -2,7 +2,8 @@ use std::process::Command;
 use std::{vec, vec::Vec};
 
 pub enum Arch {
-    Riscv64, Aarch64
+    Riscv64,
+    Aarch64,
 }
 
 const cargo_command: &str = "cargo";
@@ -13,25 +14,20 @@ const staticlib_crate_type: &str = "--crate-type=staticlib";
 
 pub struct Build {
     assembler: String,
-    linker: String
+    linker: String,
 }
 
 impl Build {
     pub fn new(arch: Arch) -> Build {
-
         let res = match arch {
-            Arch::Riscv64 => {
-                Build{
-                    assembler: RISCV64_AS.to_string(),
-                    linker: RISCV64_LD.to_string()
-                }
+            Arch::Riscv64 => Build {
+                assembler: RISCV64_AS.to_string(),
+                linker: RISCV64_LD.to_string(),
             },
-            Arch::Aarch64 => {
-                Build{
-                    assembler: AARCH64_AS.to_string(),
-                    linker: AARCH64_LD.to_string()
-                }
-            }
+            Arch::Aarch64 => Build {
+                assembler: AARCH64_AS.to_string(),
+                linker: AARCH64_LD.to_string(),
+            },
         };
 
         // remove previous build, assumed build/
@@ -49,7 +45,7 @@ impl Build {
             .arg("build")
             .output()
             .expect("failed to make a build dir. Is there something else using it?");
-        
+
         self
     }
 
@@ -61,14 +57,16 @@ impl Build {
         // assemble the file to an output file
         let output = Command::new(&cargo_command)
             .arg(rustc_command)
-            .arg(String::from(rustc_target_command)+target_arch)
+            .arg(String::from(rustc_target_command) + target_arch)
             .arg(build_config)
             .arg(rustc_flag_command)
             .arg(staticlib_crate_type)
             .arg("-o")
             .arg(output_dir)
             .output()
-            .expect("failed to execute Cargo. Please check if your dependencies and paths are right");
+            .expect(
+                "failed to execute Cargo. Please check if your dependencies and paths are right",
+            );
 
         // if cargo failed to build, thats on them. Maybe config.toml or Cargo.toml is wrong
         println!("status: {}", output.status);
@@ -86,14 +84,14 @@ impl Build {
             .arg(output_file)
             .output()
             .expect("failed to execute the assembler, is it in path? Otherwise specify its full path in Cargo.toml under [deps.arcboot]");
-        
+
         println!("status: {}", output.status);
         assert!(output.status.success());
-        
+
         self
     }
 
-    pub fn link(&self, obj_files: &[&str], linker_script: &str, output_file: &str) -> &Self {
+    pub fn link(&self, obj_files: &[String], linker_script: &str, output_file: &str) -> &Self {
         let output = Command::new(&self.linker)
             .arg("-T")
             .arg(linker_script)
@@ -103,10 +101,10 @@ impl Build {
             .arg(output_file)
             .output()
             .expect("failed to execute the linker, is it in path? Otherwise specify its full path in Cargo.toml under [deps.arcboot]");
-        
+
         println!("status: {}", output.status);
         assert!(output.status.success());
-        
+
         self
     }
 
@@ -117,7 +115,7 @@ impl Build {
             .args(["-rf", "build"])
             .output()
             .expect("failed to run rm, does it exist or is it linked?");
-        
+
         println!("status: {}", output.status);
         assert!(output.status.success());
 
@@ -134,15 +132,15 @@ const AARCH64_LD: &str = "aarch64-none-elf-ld";
 // experimental, build everything at once
 pub fn full_build(staticlib_dir: &str, arch: Arch) {
     // build riscv
-    match arch {
-        Arch::Riscv64 => {
-            let build = Build::new(Arch::Riscv64);
-            build.assemble("asm/riscv64/boot.S", "build/boot.o")
-                .link(&["build/boot.o", "build/rust/*.a"], "link/riscv64/linker.ld", "build/kernel.elf");
-        }
-        Arch::Aarch64 => {
-            
-        }
-    }
-    
+    // match arch {
+    //     Arch::Riscv64 => {
+    //         let build = Build::new(Arch::Riscv64);
+    //         build.assemble("asm/riscv64/boot.S", "build/boot.o").link(
+    //             &["build/boot.o", "build/rust/*.a"],
+    //             "link/riscv64/linker.ld",
+    //             "build/kernel.elf",
+    //         );
+    //     }
+    //     Arch::Aarch64 => {}
+    // }
 }
