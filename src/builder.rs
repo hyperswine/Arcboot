@@ -106,11 +106,15 @@ impl Build {
         println!("obj_files = {:?}", obj_files);
         println!("output_file = {}", output_file);
 
+        let joined_to_link = obj_files.join(" ");
+
+        // ! maybe args(obj_files) does something weird to to like concat it instead of spacing them out
+
         let output = Command::new(&self.linker)
             .arg("-T")
             .arg(linker_script)
             .arg("-nostdlib")
-            .args(obj_files)
+            .arg(joined_to_link)
             .arg("-o")
             .arg(output_file)
             .output()
