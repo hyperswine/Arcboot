@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 
 const __DEFAULT_ENV_PATH: &str = "kernel.build";
-const BUILD_VARS: [&str; 5] = ["OUT_DIR", "ASM_FILES", "LINK_SCRIPT", "OUT_OBJ", "OUT_IMG"];
+const BUILD_VARS: [&str; 6] = ["OUT_DIR", "ASM_FILES", "LINK_SCRIPT", "OUT_OBJ", "OUT_IMG", "LINK_OBJ"];
 
 #[macro_export]
 macro_rules! str {
@@ -30,6 +30,7 @@ pub fn read_env(env_path: &str) -> HashMap<String, String> {
     var_map.insert("LINK_SCRIPT".to_string(), "".to_string());
     var_map.insert("OUT_OBJ".to_string(), "".to_string());
     var_map.insert("OUT_IMG".to_string(), "".to_string());
+    var_map.insert("LINK_OBJ".to_string(), "".to_string());
 
     for l in lines {
         // collect any of the list, always take the last one

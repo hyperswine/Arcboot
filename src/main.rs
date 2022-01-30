@@ -34,7 +34,10 @@ fn main() {
     let out_dir = &res_map["OUT_DIR"];
     let asm_files = &res_map["ASM_FILES"];
     let linker_script = &res_map["LINK_SCRIPT"];
+    // if there are multiple asm_files and output_obj, then compile each at a time.
+    // or better, just specify asm_files and compile to out_dir/<name>.o
     let output_objs = &res_map["OUT_OBJ"];
+    let link_objs = &res_map["LINK_OBJ"];
     let output_img = &res_map["OUT_IMG"];
 
     // if build, take the config file kernel.build and build it
@@ -55,13 +58,21 @@ fn main() {
         let build_config = check_build_config(args.as_slice());
 
         // make a list of files to be linked (.o assembled and kernel .a)
-        let mut to_link = [str!(out_dir) + "kernel.a", str!(out_dir) + output_objs];
+        let mut to_link = vec!();
+        // split on spaces
+        let outs: Vec<&str> = link_objs.split(' ').collect();
+        for o in outs {
+            to_link.push(o.to_string());
+        }
+
+        // debug
+        println!("to_link = {:?}", to_link);
 
         // build
-        // let build = Build::new(__arch_build)
-        //     .rust_build(arch_build, build_config, out_dir)
-        //     .assemble(asm_files, &output_objs)
-        //     .link(&to_link, linker_script, &output_img);
+        let build = Build::new(__arch_build)
+            .rust_build(arch_build, build_config, out_dir)
+            .assemble(asm_files, &output_objs)
+            .link(&to_link, linker_script, &output_img);
 
         // make a test to test out example/kernel.build
     }
