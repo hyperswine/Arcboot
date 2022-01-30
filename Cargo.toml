@@ -3,6 +3,7 @@ name = "arcboot"
 version = "0.1.0"
 edition = "2021"
 description = "An executable tool for building rust-based kernels and compiling, assembling and linking any extra dependencies"
+license = "BSD-3-Clause"
 
 exclude = [
     "archive/*",
