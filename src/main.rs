@@ -1,14 +1,7 @@
-use std::env;
-use std::process::exit;
-use std::process::Command;
-use std::fs;
+use std::{env, fs};
+use std::process::{exit, Command};
 
-extern crate dotenv;
-
-use dotenv::from_filename;
-
-#[macro_use]
-extern crate dotenv_codegen;
+const default_arch_build: Arch = Riscv64;
 
 // assumes you are running this in the root of your kernel with Cargo.toml visible
 // can suppress output by default, then print to stdout if --verbose or -v is specified
@@ -25,28 +18,28 @@ fn main() {
 
     // if build, take the config file kernel.build and build it
     if args[1].eq("build") {
-        // let config_str = fs::read_to_string("kernel.build").expect("Could not read file, does it exist or perhaps not readable?");
+        let res_map = read_env();
 
-        // just use dotenv, but keep kernel.build idea with variables:
-        // OUT_DIR, which '/.a' gets appended
-        // ASM_FILES, a space separated list of non-special character files to be assembled and linked to the final program. Maybe enclosed within double quotes "a.asm b.asm c.asm"
-        // LINK_SCRIPT, a file "linker.ld"
+        // immutable references
+        let out_dir = res_map["OUT_DIR"];;
+        let asm_files = res_map["ASM_FILES"];
+        let linker_script = res_map["LINKER_SCRIPT"];
 
-        // change to kernel.build
-        let _env = from_filename("examples/kernel.build").ok();
+        let arch_build: Arch = default_arch_build;
 
-        let out_dir = dotenv!("OUT_DIR");
-        println!("OUT_DIR = {}", out_dir);
+        // collect the arch, if not specified, assume spectro/riscv64
+        if args.contains(&"aarch64") {
+            arch_build = Arch::Aarch64;
+        }
+        
+        // build
+        let build = Build::new().rust_build()
 
-        let asm_files = dotenv!("ASM_FILES");
-        println!("ASM_FILES = {}", asm_files);
+        // make a test to test out example/kernel.build
 
-        let link_script = dotenv!("LINK_SCRIPT");
-        println!("LINK_SCRIPT = {}", link_script);
-
-        // Command::new("cargo")
-        // .arg("rustc")
-        // .arg("--debug");
+        Command::new("cargo")
+        .arg("rustc")
+        .arg("--debug");
     }
 
     // when testing, build the with the --test flag instead of the --debug or --release flag

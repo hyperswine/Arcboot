@@ -1,0 +1,29 @@
+## Old Code for Build
+
+// let config_str = fs::read_to_string("kernel.build").expect("Could not read file, does it exist or perhaps not readable?");
+
+        // just use dotenv, but keep kernel.build idea with variables:
+        // OUT_DIR, which '/.a' gets appended
+        // ASM_FILES, a space separated list of non-special character files to be assembled and linked to the final program. Maybe enclosed within double quotes "a.asm b.asm c.asm"
+        // LINK_SCRIPT, a file "linker.ld"
+
+        // change to kernel.build
+        let _env = from_filename("examples/kernel.build").ok();
+
+        let out_dir = dotenv!("OUT_DIR");
+        println!("OUT_DIR = {}", out_dir);
+
+        let asm_files = dotenv!("ASM_FILES");
+        println!("ASM_FILES = {}", asm_files);
+
+        let link_script = dotenv!("LINK_SCRIPT");
+        println!("LINK_SCRIPT = {}", link_script);
+
+## Stuff
+
+// MAYBE make this an executable and specify the output dir in [deps] or config.toml
+// two commands, `cargo arcbuild` to make the bootable image from the kernel crate and the other boot/linker scripts.
+// `cargo arctest spectro` to run qemu with settings for riscv64 and cfg(test). Maybe cargo run --test would work or cargo build --test then qemu on the image
+
+// args: pass a expect() object in from the build command
+// TODO: better idea, specify the output dir of the full kernel staticlib
