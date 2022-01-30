@@ -29,6 +29,7 @@ fn main() {
     let asm_files = &res_map["ASM_FILES"];
     let linker_script = &res_map["LINK_SCRIPT"];
     let output_objs = &res_map["OUT_OBJ"];
+    let output_img = &res_map["OUT_IMG"];
 
     // if build, take the config file kernel.build and build it
     if args[1] == "build" {
@@ -54,7 +55,7 @@ fn main() {
         let build = Build::new(__arch_build)
             .rust_build(arch_build, build_config, out_dir)
             .assemble(asm_files, &output_objs)
-            .link(&to_link, linker_script, &output_objs);
+            .link(&to_link, linker_script, &output_img);
 
         // make a test to test out example/kernel.build
     }
