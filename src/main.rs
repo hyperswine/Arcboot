@@ -1,13 +1,14 @@
 use std::process::{exit, Command};
 use std::{env, fs};
 
-const default_arch_build: Arch = Arch::Riscv64;
+const DEFAULT_ARCH: Arch = Arch::Riscv64;
 
 use arcboot::builder::*;
 use arcboot::readenv::*;
 use arcboot::str;
 
 const BUILD_CFG: [&str; 3] = ["--release", "--debug", "--test"];
+const SUPPORT_ENV_PATH: &str = "support/";
 
 // assumes you are running this in the root of your kernel with Cargo.toml visible
 // can suppress output by default, then print to stdout if --verbose or -v is specified
@@ -20,12 +21,17 @@ fn main() {
         exit(1);
     }
 
-    let res_map = read_env();
+    // by default, env path should be in support/
+    // if 'spectro' or 'pi4b' is not specified, assumee 'spectro'
+    let mut arch_build_path = "support/spectro.build";
+    if args.contains(&"pi4b".to_string()) {
+        arch_build_path = "support/pi4b.build";
+    }
+
+    let res_map = read_env(arch_build_path);
 
     // immutable references
     let out_dir = &res_map["OUT_DIR"];
-    // ! NOTE: only support a single .S file for now. Can simply make it a HashMap<String, Vec<String>> instead
-    // and individually specify the types of these vars. Vec<String> for asm_files and output_objs
     let asm_files = &res_map["ASM_FILES"];
     let linker_script = &res_map["LINK_SCRIPT"];
     let output_objs = &res_map["OUT_OBJ"];
@@ -33,7 +39,7 @@ fn main() {
 
     // if build, take the config file kernel.build and build it
     if args[1] == "build" {
-        let mut __arch_build: Arch = default_arch_build;
+        let mut __arch_build: Arch = DEFAULT_ARCH;
 
         // collect the arch, if not specified, assume spectro/riscv64
         if args.contains(&"aarch64".to_string()) {
@@ -52,16 +58,19 @@ fn main() {
         let mut to_link = [str!(out_dir) + "kernel.a", str!(out_dir) + output_objs];
 
         // build
-        let build = Build::new(__arch_build)
-            .rust_build(arch_build, build_config, out_dir)
-            .assemble(asm_files, &output_objs)
-            .link(&to_link, linker_script, &output_img);
+        // let build = Build::new(__arch_build)
+        //     .rust_build(arch_build, build_config, out_dir)
+        //     .assemble(asm_files, &output_objs)
+        //     .link(&to_link, linker_script, &output_img);
 
         // make a test to test out example/kernel.build
     }
 
     // when testing, build the with the --test flag instead of the --debug or --release flag
     if args[1] == "test" {
+        // ! test not supported yet
+        exit(1);
+
         let QEMU = "qemu-system-riscv64";
 
         Command::new("cargo")
@@ -76,6 +85,9 @@ fn main() {
     // when "run" is specified without a config, pass it to cargo as `run` by itself, and it should run the previously built cfg or the default one
     // when run with a config, build first with that config then run
     if args[1] == "run" {
+        // ! run not supported yet
+        exit(1);
+
         let QEMU = "qemu-system-riscv64";
 
         Command::new("cargo")

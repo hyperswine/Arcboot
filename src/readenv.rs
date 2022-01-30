@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::fs;
 
-const DEFAULT_ENV_PATH: &str = "kernel.build";
+const __DEFAULT_ENV_PATH: &str = "kernel.build";
 const BUILD_VARS: [&str; 5] = ["OUT_DIR", "ASM_FILES", "LINK_SCRIPT", "OUT_OBJ", "OUT_IMG"];
 
 #[macro_export]
@@ -17,9 +17,9 @@ macro_rules! str {
 }
 
 // dont worry about testing and correctness, as long as it works in the good case where you have a good kernel.build file
-pub fn read_env() -> HashMap<String, String> {
+pub fn read_env(env_path: &str) -> HashMap<String, String> {
     // read from "kernel.build"
-    let build_env = fs::read_to_string(DEFAULT_ENV_PATH)
+    let build_env = fs::read_to_string(env_path)
         .expect("Could not read file. Does it exist, or perhaps it is not readable?");
     // scan line by line
     let lines = build_env.lines();

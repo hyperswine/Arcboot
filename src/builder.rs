@@ -54,6 +54,11 @@ impl Build {
     // args: 'build_config' needs to be in the form --release, --debug, or --target
     // target_arch needs to be in the form riscv64gc-unknown-none-elf, aarch64-none-elf or a JSON file (not supported yet)
     pub fn rust_build(&self, target_arch: &str, build_config: &str, output_dir: &str) -> &Self {
+        // debug
+        println!("target_arch = {}", target_arch);
+        println!("build_config = {}", build_config);
+        println!("output_dir = {}", output_dir);
+
         // assemble the file to an output file
         let output = Command::new(&cargo_command)
             .arg(rustc_command)
@@ -62,7 +67,7 @@ impl Build {
             .arg(rustc_flag_command)
             .arg(staticlib_crate_type)
             .arg("-o")
-            .arg(output_dir)
+            .arg(output_dir.to_string() + "/.a")
             .output()
             .expect(
                 "failed to execute Cargo. Please check if your dependencies and paths are right",
@@ -76,6 +81,10 @@ impl Build {
     }
 
     pub fn assemble(&self, asm_file: &str, output_file: &str) -> &Self {
+        // debug
+        println!("asm_file = {}", asm_file);
+        println!("output_file = {}", output_file);
+
         // assemble the file to an output file
         let output = Command::new(&self.assembler)
             .arg("-c")
@@ -92,6 +101,11 @@ impl Build {
     }
 
     pub fn link(&self, obj_files: &[String], linker_script: &str, output_file: &str) -> &Self {
+        // debug
+        println!("linker_script = {}", linker_script);
+        println!("obj_files = {:?}", obj_files);
+        println!("output_file = {}", output_file);
+
         let output = Command::new(&self.linker)
             .arg("-T")
             .arg(linker_script)

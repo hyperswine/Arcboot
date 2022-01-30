@@ -1,0 +1,7 @@
+# build env config for spectro
+
+OUT_DIR=build
+ASM_FILES=asm/boot.S
+LINK_SCRIPT=link/linker.lds
+OUT_OBJ=build/boot.o build/*.a
+OUT_IMG=build/kernel.img
