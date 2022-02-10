@@ -15,6 +15,8 @@ impl GraphicsDriver {
 // what to do with VRAM -> maybe we are able to load most of the assets, textures, 3d models (list of vertices and options) to VRAM beforehand
 // maybe we are able to load it in binary format or somehow organise them in a pseudo hierarchy within VRAM
 // then use the bottom parts of VRAM to store temp data. IF not enough space then use RAM
+// GPU only gets called with glDoX gets called on the state machine within VRAM
+// glSpecify to specify the vertex ordering and stuff
 struct GraphicsProgram;
 
 impl GraphicsProgram {
