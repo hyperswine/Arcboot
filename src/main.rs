@@ -1,47 +1,49 @@
+use std::env;
 use std::process::{exit, Command};
-use std::{env, fs};
 
 const DEFAULT_ARCH: Arch = Arch::Riscv64;
 
 use arcboot::builder::*;
 use arcboot::readenv::*;
-use arcboot::str;
 
 const BUILD_CFG: [&str; 3] = ["--release", "--debug", "--test"];
-const SUPPORT_ENV_PATH: &str = "support/";
 
-// assumes you are running this in the root of your kernel with Cargo.toml visible
-// can suppress output by default, then print to stdout if --verbose or -v is specified
 fn main() {
-    // check what was run, either arcboot build or arcboot test
+    // SECTION 0: CHECKS
 
-    // only allow <= 3 args or if arg[1] != test or build, exit
+    let allowed_commands = ["build", "test", "run", "flash"];
+
+    // Check what was run, either arcboot build | test | flash
     let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 || args.len() > 3 || (args[1] != "build" && args[1] != "test") {
+    if args.len() <= 1 || args.len() > 3 || !allowed_commands.contains(&&args[1].as_ref()) {
         exit(1);
     }
 
-    // by default, env path should be in support/
-    // if 'spectro' or 'pi4b' is not specified, assumee 'spectro'
-    let mut arch_build_path = "support/spectro.build";
-    if args.contains(&"pi4b".to_string()) {
-        arch_build_path = "support/pi4b.build";
-    }
+    /*
+        SECTION A: BUILD THE KERNEL LIBRARY
+    */
 
-    let res_map = read_env(arch_build_path);
-
-    // immutable references
-    let out_dir = &res_map["OUT_DIR"];
-    let asm_files = &res_map["ASM_FILES"];
-    let linker_script = &res_map["LINK_SCRIPT"];
-    // if there are multiple asm_files and output_obj, then compile each at a time.
-    // or better, just specify asm_files and compile to out_dir/<name>.o
-    let output_objs = &res_map["OUT_OBJ"];
-    let link_objs = &res_map["LINK_OBJ"];
-    let output_img = &res_map["OUT_IMG"];
-
-    // if build, take the config file kernel.build and build it
+    // Take the config file kernel.build and build it
     if args[1] == "build" {
+        // by default, env path should be in support/
+        // if 'spectro' or 'pi4b' is not specified, assumee 'spectro'
+        let mut arch_build_path = "support/spectro.build";
+        if args.contains(&"pi4b".to_string()) {
+            arch_build_path = "support/pi4b.build";
+        }
+
+        let res_map = read_env(arch_build_path);
+
+        // immutable references
+        let out_dir = &res_map["OUT_DIR"];
+        let asm_files = &res_map["ASM_FILES"];
+        let linker_script = &res_map["LINK_SCRIPT"];
+        // if there are multiple asm_files and output_obj, then compile each at a time.
+        // or better, just specify asm_files and compile to out_dir/<name>.o
+        let output_objs = &res_map["OUT_OBJ"];
+        let link_objs = &res_map["LINK_OBJ"];
+        let output_img = &res_map["OUT_IMG"];
+
         let mut __arch_build: Arch = DEFAULT_ARCH;
 
         // collect the arch, if not specified, assume spectro/riscv64
@@ -58,7 +60,7 @@ fn main() {
         let build_config = check_build_config(args.as_slice());
 
         // make a list of files to be linked (.o assembled and kernel .a)
-        let mut to_link = vec!();
+        let mut to_link = vec![];
         // split on spaces
         let outs: Vec<&str> = link_objs.split(' ').collect();
         for o in outs {
@@ -73,45 +75,57 @@ fn main() {
             .rust_build(arch_build, build_config, out_dir)
             .assemble(asm_files, &output_objs)
             .link(&to_link, linker_script, &output_img);
-
-        // make a test to test out example/kernel.build
     }
 
-    // when testing, build the with the --test flag instead of the --debug or --release flag
+    /*
+        SECTION B: ARCTEST
+    */
+
+    // TODO: uses --feature arcboot and runs it on qemu
     if args[1] == "test" {
-        // ! test not supported yet
         exit(1);
 
         let QEMU = "qemu-system-riscv64";
 
+        // *NOTE: will build the kernel in `arctest` mode with its own EFI stub and set println = UART instead of fd = 1 (usually the main console)
+
         Command::new("cargo")
             .arg("rustc")
-            .arg("--test")
-            .arg("-- --nocapture");
+            .arg("--feature")
+            .arg("arctest");
 
         // then run it on qemu like normal. Im not sure if the stdout will be captured, so maybe specify --nocapture above
         Command::new(QEMU).arg("");
     }
 
-    // when "run" is specified without a config, pass it to cargo as `run` by itself, and it should run the previously built cfg or the default one
-    // when run with a config, build first with that config then run
+    /*
+        SECTION C: RUN A BUILT KERNEL IMAGE
+    */
+
+    // TODO: run with either spectro/pi4b on QEMU using a prebuilt kernel .a and arcboot .o
+    // if not found, will attempt to run `arcboot build` first, which should generate the output in build/
     if args[1] == "run" {
-        // ! run not supported yet
         exit(1);
+    }
 
-        let QEMU = "qemu-system-riscv64";
+    /*
+        SECTION D: FLASH ARCBOOT BL
+    */
 
-        Command::new("cargo")
-            .arg("rustc")
-            .arg("--test")
-            .arg("-- --nocapture");
+    // TODO: flash arcboot bl for a certain arch, arm, riscv, x86 onto a clean GPT drive as a single partition
+    // TODO: package an arcboot .exe and neutron/quantii .exe and any .config ascii files in a dir and create an ISO, then flash onto the disk as two separate partitions
+    if args[1] == "flash" {
+        Command::new("flash");
 
-        // then run it on qemu like normal. Im not sure if the stdout will be captured, so maybe specify --nocapture above
-        Command::new(QEMU).arg("");
+        // OPTION 1: install arcboot bl by itself. Basically creates a FAT32 partition of around 200MB
+        // then copies the files required by UEFI like /EFI/boot/* and any extra config files in the root dir
+
+        // OPTION 2: Recommended for neutron systems. Packages arcboot bl and neutron lib into a single filesystem (FAT32). Arcboot bl still does the job of locating the neutron image on disk, but stored on the same FAT32 partition
+        // easy to get started and up, the other stuff that neutron/quantii would use, e.g. the root filesystem and other /mnt/ disks can be other partitions on the same or different disks
     }
 }
 
-// returns the build config
+// Returns the build config
 #[inline(always)]
 fn check_build_config<'a>(to_check: &'a [String]) -> &'a str {
     for _st in to_check {
@@ -127,4 +141,13 @@ fn check_build_config<'a>(to_check: &'a [String]) -> &'a str {
     }
     // default, release
     "--release"
+}
+
+/*
+    TESTS
+*/
+
+#[test]
+fn test_cmd() {
+    // set cli_args and call collect_cli_args()
 }

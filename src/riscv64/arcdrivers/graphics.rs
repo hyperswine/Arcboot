@@ -1,9 +1,5 @@
-// For drivers that would be great for the bootloader to have
-// Usually graphics driver is the biggest thing. Can load the graphics driver straight away and tell the GPU to render the arcboot graphics
-// With vulkan
-
+// Usually graphics driver is the biggest thing. Can load the graphics driver straight away and tell the GPU to render the arcboot graphics with vulkan
 // More advanced features like RAID features, RGB device lighting, Surround Sound, etc can be kernel drivers loaded when the kernel starts up
-
 // BIOS should have basically no drivers. If firmware big enough can maybe place some extra stuff but assume mostly interfaces very primitively, initialising, multiplexing and closing
 
 struct GraphicsDriver;

@@ -6,8 +6,13 @@
 
 pub mod bootimg;
 pub mod builder;
+pub mod drivers;
 pub mod readenv;
-pub mod arcdriver;
+
+// ARCH
+pub mod armv8;
+pub mod riscv64;
+pub mod x86_64;
 
 //
 // TEST
