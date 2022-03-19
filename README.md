@@ -10,6 +10,10 @@ Specifically optimised to building Spectro and Pi4B. Lack of options and stuff t
 
 So if you run `cargo install arcboot` where arcboot is actually the HTTPS link to the project's github repo. You can then run `arboot` with `cargo` like `cargo arcboot`.
 
+## Arcdriver
+
+Like uboot and oreboot `drivers/`. Device specific, loaded on the fly based on what generic device, e.g. Pi4B, SiFive board, etc. the bootloader detects. Also allows disk drive management and filesystem views. Like GRUB.
+
 ## UEFI
 - Boots on UEFI. Needs to be flashed onto a GPT disk using `arcboot flash <disk>`. If disk isnt GPT or is already formatted in another scheme, its headers will be cleared to a default GPT with the first partition being FAT32 storing the bootloader img.
 - Kernel images that you want to boot from can be flashed onto any GPT disk. Needs to have multiboot compliant headers and entry to be discoverable by arcboot.

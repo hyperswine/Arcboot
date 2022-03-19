@@ -1,3 +1,7 @@
+# ASSEMBLE THIS INTO UEFI.ELF
+# This is basically a full app that runs on UEFI BIOSes, assumes ACPI is setup
+# Im taking cues from das-u-boot
+
 efi_main:
     # create efi system table structs in memory
         # something about firmware version
