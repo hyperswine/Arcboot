@@ -1,10 +1,5 @@
-// expose certain things to Cargo.toml in [deps.arcboot]
-// hook onto test or something
+// Handy way to compile neutron kernel code and arcboot bl code together and link into a bootable image
 
-// link your kernel crate, call your build function, then call this build function when you run `cargo arcbuild`
-// the build function you specify compiles your kernel crate to a staticlib as kernel.a
-// this build function then runs after that
+// SECTION A: Take a small BIOS MBR stub (entry.S) and assemble it. Then compile the kernel and link with it into a bootable .ELF. This can be run directly with qemu -bios bootimg.elf
 
-// A handy way to build the kernel + bootloader and run it without ever touching cargo or qemu
-// Useful for SpectroVM where we make a bootable Bare ELF64 file. The spectroVM can run bare metal ELF. But syscalls and stuff need the kernel. So the kernel itself
-// is on bare metal, at least the low-mid level components like fs, services, processes, memory management. WM, DE, Apps not really.
+// SECTION B: Basically does what `arcboot flash --neutron <disk>` does. Perform a full .ISO image creation and flash onto a virtual qhd file. Doesnt support extras yet like quantii

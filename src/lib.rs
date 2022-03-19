@@ -1,22 +1,17 @@
-// PLACE MODULES AND ANY COMPILER GLOBAL CONFIGS HERE
-
-//
-// API
-//
-
+// UTILITIES
 pub mod bootimg;
 pub mod builder;
 pub mod drivers;
 pub mod readenv;
 
-// ARCH
+// ARCH-SPECIFIC
 pub mod armv8;
 pub mod riscv64;
 pub mod x86_64;
 
-//
-// TEST
-//
+/*
+    LIBRARY TESTS
+*/
 
 #[cfg(test)]
 mod tests {

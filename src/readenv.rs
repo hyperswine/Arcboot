@@ -1,10 +1,17 @@
-// read line by line a kernel.build file
+// Read line by line a kernel.build file
 
 use std::collections::HashMap;
 use std::fs;
 
 const __DEFAULT_ENV_PATH: &str = "kernel.build";
-const BUILD_VARS: [&str; 6] = ["OUT_DIR", "ASM_FILES", "LINK_SCRIPT", "OUT_OBJ", "OUT_IMG", "LINK_OBJ"];
+const BUILD_VARS: [&str; 6] = [
+    "OUT_DIR",
+    "ASM_FILES",
+    "LINK_SCRIPT",
+    "OUT_OBJ",
+    "OUT_IMG",
+    "LINK_OBJ",
+];
 
 #[macro_export]
 macro_rules! str {

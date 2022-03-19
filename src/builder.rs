@@ -1,5 +1,4 @@
 use std::process::Command;
-use std::{vec, vec::Vec};
 
 pub enum Arch {
     Riscv64,
@@ -38,19 +37,16 @@ impl Build {
         res
     }
 
-    // fn error_check(&self, output: Status) -> Self { self }
-
     fn create_build(&self) -> &Self {
         Command::new("mkdir")
             .arg("build")
             .output()
-            .expect("failed to make a build dir. Is there something else using it?");
+            .expect("failed to make a build dir. Does it already exist?");
 
         self
     }
 
-    // build the kernel
-    // something like: cargo rustc --target=riscv64gc-unknown-none-elf --release -- --crate-type=staticlib -o build/rust/.a
+    // Build the kernel
     // args: 'build_config' needs to be in the form --release, --debug, or --target
     // target_arch needs to be in the form riscv64gc-unknown-none-elf, aarch64-none-elf or a JSON file (not supported yet)
     pub fn rust_build(&self, target_arch: &str, build_config: &str, output_dir: &str) -> &Self {
@@ -100,6 +96,7 @@ impl Build {
         self
     }
 
+    // ? DOESNT WORK, MAYBE JUST CALL THE SCRIPT FROM scripts/link.sh
     pub fn link(&self, obj_files: &[String], linker_script: &str, output_file: &str) -> &Self {
         // debug
         println!("linker_script = {}", linker_script);
@@ -107,8 +104,6 @@ impl Build {
         println!("output_file = {}", output_file);
 
         let joined_to_link = obj_files.join(" ");
-
-        // ! maybe args(obj_files) does something weird to to like concat it instead of spacing them out
 
         let output = Command::new(&self.linker)
             .arg("-T")
@@ -120,14 +115,13 @@ impl Build {
             .output()
             .expect("failed to execute the linker, is it in path? Otherwise specify its full path in Cargo.toml under [deps.arcboot]");
 
+        // literally not event returning 1, instead some other error code. Def not 0
         println!("status: {}", output.status);
-        // is it returning 1 even when its building?
-        // assert!(output.status.success());
 
         self
     }
 
-    // clean up the temporary build files
+    // Clean up the temporary build files
     // NOTE: best to output the final binary to the root or some other folder
     pub fn clean(&self) -> &Self {
         let output = Command::new("rm")
