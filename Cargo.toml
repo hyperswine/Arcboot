@@ -1,16 +1,6 @@
-[package]
-name = "arcboot"
-version = "0.1.4"
-edition = "2021"
-description = "An executable tool for building rust-based kernels and compiling, assembling and linking any extra dependencies"
-license = "GPL-3.0-only"
+[workspace]
 
-exclude = [
-    "archive/*",
-    "examples/*",
-    "support",
+members = [
+    "arcboot",
+    "arcutils",
 ]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]

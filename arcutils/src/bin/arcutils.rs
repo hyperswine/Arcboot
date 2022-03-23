@@ -1,10 +1,10 @@
 use std::env;
 use std::process::{exit, Command};
 
-const DEFAULT_ARCH: Arch = Arch::Riscv64;
+use arcutils::builder::*;
+use arcutils::readenv::*;
 
-use arcboot::builder::*;
-use arcboot::readenv::*;
+const DEFAULT_ARCH: Arch = Arch::Riscv64;
 
 const BUILD_CFG: [&str; 3] = ["--release", "--debug", "--test"];
 

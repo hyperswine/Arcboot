@@ -2,6 +2,8 @@
 
 A set of utilities including a bootloader for riscv and arm. Comes in the form of a single executable.
 
+- the source code contains multiple executable targets. One for the main `arcutils` and 3 for each arch-specific bootloader image `arcboot-riscv`, `arcboot-arm`, `arcboot-x86_64`
+
 ## Features
 
 - can create disk images of type GPT, partitioned with FAT and BTRFS/DOS/EXT4
@@ -30,7 +32,7 @@ Technically, you dont need a bootloader if your kernel has an EFI stub associate
 
 ## UEFI
 
-- Boots on UEFI. Needs to be flashed onto a GPT disk using `arcboot flash <disk>`. If disk isnt GPT or is already formatted in another scheme, its headers will be cleared to a default GPT with the first partition being FAT32 storing the bootloader img.
+- Boots on UEFI. Needs to be flashed onto a GPT disk using `arcutils flash <disk>`. If disk isnt GPT or is already formatted in another scheme, its headers will be cleared to a default GPT with the first partition being FAT32 storing the bootloader img.
 - Kernel images that you want to boot from can be flashed onto any GPT disk. Needs to have multiboot compliant headers and entry to be discoverable by arcboot.
 
 # Arcboot v1+ (LETS GO)

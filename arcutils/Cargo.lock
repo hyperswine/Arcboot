@@ -3,9 +3,5 @@
 version = 3
 
 [[package]]
-name = "arcboot"
-version = "0.1.0"
-
-[[package]]
 name = "arcutils"
 version = "0.1.4"

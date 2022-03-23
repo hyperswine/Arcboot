@@ -1,0 +1,14 @@
+[package]
+description = "Arc Bootloaders for RV, ARM and x86"
+edition = "2021"
+license = "GPL-3.0-only"
+name = "arcboot"
+version = "0.1.0"
+
+[dependencies]
+
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
