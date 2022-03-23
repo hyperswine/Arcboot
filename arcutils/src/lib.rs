@@ -1,13 +1,7 @@
 // UTILITIES
 pub mod bootimg;
 pub mod builder;
-pub mod drivers;
 pub mod readenv;
-
-// ARCH-SPECIFIC
-pub mod armv8;
-pub mod riscv64;
-pub mod x86_64;
 
 /*
     LIBRARY TESTS
