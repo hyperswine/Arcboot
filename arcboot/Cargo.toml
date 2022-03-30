@@ -8,3 +8,6 @@ version = "0.1.0"
 [dependencies]
 uefi = { version = "0.15.0", features = ["exts"] }
 uefi-services = "0.12.0"
+
+[target.'cfg(target_arch = "riscv64")'.dependencies]
+rustsbi = "0.2.2"
