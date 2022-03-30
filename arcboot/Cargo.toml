@@ -6,9 +6,5 @@ name = "arcboot"
 version = "0.1.0"
 
 [dependencies]
-
-[profile.release]
-panic = "abort"
-
-[profile.dev]
-panic = "abort"
+uefi = { version = "0.15.0", features = ["exts"] }
+uefi-services = "0.12.0"
