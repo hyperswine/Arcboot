@@ -3,6 +3,7 @@
 A set of utilities including a bootloader for riscv and arm. Comes in the form of a single executable.
 
 - the source code contains multiple executable targets. One for the main `arcutils` and another for the `arcboot` bootloader itself
+- build arcutils first, then use that to build, run and test arcboot
 
 ## Features
 

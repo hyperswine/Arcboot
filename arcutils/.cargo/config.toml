@@ -1,0 +1,5 @@
+[build]
+out-dir = "../build"
+
+[unstable]
+unstable-options = true
