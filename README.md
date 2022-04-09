@@ -5,6 +5,10 @@ A uefi bootloader for riscv, arm and x86. Comes in the form of a single executab
 - the source code contains a single executable target and no libraries. By default, builds for aarch64
 - build arcutils first, then use that to build, run and test arcboot
 
+## TODO
+
+- get linker scripts to work properly and setup certain sections for bootloader stage 1 [ ]
+
 ## Design
 
 Like Oreboot and GRUB, Arcboot is a multiboot UEFI bootloader. For stages 1 and 2 after platform firmware starts and loads the image (BIN or ELF) into RAM.
