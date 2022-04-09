@@ -7,6 +7,7 @@ A uefi bootloader for riscv, arm and x86. Comes in the form of a single executab
 
 ## TODO
 
+- get uart working properly on qemu
 - get linker scripts to work properly and setup certain sections for bootloader stage 1 [ ]
 
 ## Design
