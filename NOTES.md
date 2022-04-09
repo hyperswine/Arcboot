@@ -1,4 +1,4 @@
-### Technicalities
+# Technicalities
 
 Technically, you dont need a bootloader if your kernel has an EFI stub associated with it. But arcboot is a complete UEFI bootloader so it can be configured a number of ways.
 
@@ -15,9 +15,9 @@ Technically, you dont need a bootloader if your kernel has an EFI stub associate
 - Boots on UEFI. Needs to be flashed onto a GPT disk using `arcutils flash <disk>`. If disk isnt GPT or is already formatted in another scheme, its headers will be cleared to a default GPT with the first partition being FAT32 storing the bootloader img.
 - Kernel images that you want to boot from can be flashed onto any GPT disk. Needs to have multiboot compliant headers and entry to be discoverable by arcboot.
 
-# Arcboot v1+ (LETS GO)
+## Arcboot v1+ (LETS GO)
 
-## Bootloader Features v1+
+### Bootloader Features v1+
 
 - Simple GUI using arcgraphics drivers shared with neutron when installed with neutron as a primary OS in `PRIMARY` mode. Can also load any drivers configured to be loaded at boot. Including arcgraphics, arcmouse, arckey
 - Graphical troubleshoot options to reset drives and apps. Can reset a neutron/quantii install if there is a problem whe installed in `PRIMARY` mode. Also a full recovery mode for broken quantii installs -> grub-like shell for recovery commands on NFS root and boot partitions

@@ -1,4 +1,4 @@
-## Arcboot Bootloader
+# Arcboot Bootloader
 
 The main bootloader images for riscv, arm and x86. I want to optimise for riscv though.
 
