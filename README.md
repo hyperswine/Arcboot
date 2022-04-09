@@ -1,11 +1,11 @@
 # ArcBoot v0
 
-A set of utilities including a bootloader for riscv and arm. Comes in the form of a single executable.
+A uefi bootloader for riscv, arm and x86. Comes in the form of a single executable.
 
-- the source code contains multiple executable targets. One for the main `arcutils` and another for the `arcboot` bootloader itself
+- the source code contains a single executable target and no libraries. By default, builds for aarch64
 - build arcutils first, then use that to build, run and test arcboot
 
-## Features
+## Arcutils Features
 
 - create disk images of type GPT, partitioned with FAT and BTRFS/DOS/EXT4
 -[flash](https://qemu.readthedocs.io/en/latest/tools/qemu-img.html) my arcboot bootloader onto the disk, in UEFI mode (/EFI/boot/...)
