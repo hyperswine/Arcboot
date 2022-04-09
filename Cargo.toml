@@ -1,16 +1,29 @@
 [package]
-name = "arcboot"
-version = "0.1.4"
+description = "Arc Bootloaders for RV, ARM and x86"
 edition = "2021"
-description = "An executable tool for building rust-based kernels and compiling, assembling and linking any extra dependencies"
 license = "GPL-3.0-only"
-
-exclude = [
-    "archive/*",
-    "examples/*",
-    "support",
-]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+name = "arcboot"
+version = "0.1.0"
 
 [dependencies]
+uefi = { version = "0.15.0", features = ["exts"] }
+uefi-services = "0.12.0"
+embedded-hal = "0.2.7"
+# for parsing acpi tables, given firmware implements them
+acpi = "4.1.0"
+
+# ! should be using this as an executable by its own before last stage bootloader, i.e. arcboot
+# maybe combine uefi + load sbi ABI, then arcboot
+[target.'cfg(target_arch = "riscv64")'.dependencies]
+rustsbi = "0.2.2"
+riscv = "0.7.0"
+riscv-rt = "0.8.1"
+
+# mostly cortex a support
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+cortex-a = "7.2.0"
+aarch64 = "*"
+
+# for all x86_64 systems
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+x86_64 = "0.14.9"
