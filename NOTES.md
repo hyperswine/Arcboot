@@ -14,6 +14,8 @@ Technically, you dont need a bootloader if your kernel has an EFI stub associate
 
 - Boots on UEFI. Needs to be flashed onto a GPT disk using `arcutils flash <disk>`. If disk isnt GPT or is already formatted in another scheme, its headers will be cleared to a default GPT with the first partition being FAT32 storing the bootloader img.
 - Kernel images that you want to boot from can be flashed onto any GPT disk. Needs to have multiboot compliant headers and entry to be discoverable by arcboot.
+- Create an EFI system partition of 50MiB and copy arcboot.img and neutron.elf into it. This is the default way to boot
+- I will also support checking other partitions for bootable images for kernel booting or chain booting
 
 ## Arcboot v1+ (LETS GO)
 
