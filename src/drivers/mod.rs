@@ -9,7 +9,6 @@ struct ModelDriver;
 
 // * use uefi logger
 
-use alloc::vec::Vec;
 use uefi::logger::Logger;
 use uefi::proto::console::text::{Output, OutputMode};
 
@@ -29,8 +28,6 @@ struct Group;
 
 struct File {
     executable: bool,
-    groups: Vec<Group>,
-
 }
 struct Dir;
 // symlink
@@ -49,14 +46,14 @@ type RootFS = u64;
 // storage of filesystem metadata in memory
 struct NeFSPartition {
     partition: Partition,
-    root_fs: Root,
+    root_fs: RootFS,
 }
 
 // for GPT
 const NeFS_GUID: u128 = 0x1FF;
 
 // contains the offset + size for the partition on disk
-struct Partition {
+pub struct Partition {
     id: u64,
     offset: u64,
     size: u64,
@@ -64,21 +61,19 @@ struct Partition {
 
 // given a nefs partition, collect data on it
 // from the headers and stuff
-pub fn nefs(partition: &Partition) {
-
-}
+pub fn nefs(partition: &Partition) {}
 
 // if detect an nefs partition on GPT
 // load the driver
 
-pub fn load_drivers() {
-    // for each drive
-    // check gpt tables for filesystems
-    for drive in drives {
-        if drive.id == NeFS_GUID {
-            // load NeFS drivers if not loaded already
-            load_nefs_driver();
-            // do what it does
-        }
-    }
-}
+// pub fn load_drivers() {
+//     // for each drive
+//     // check gpt tables for filesystems
+//     for drive in drives {
+//         if drive.id == NeFS_GUID {
+//             // load NeFS drivers if not loaded already
+//             load_nefs_driver();
+//             // do what it does
+//         }
+//     }
+// }

@@ -6,17 +6,19 @@ name = "arcboot"
 version = "0.1.0"
 
 [dependencies]
-uefi = { version = "0.15.0", features = ["exts"] }
+uefi = { version = "0.15.0", features = ["alloc", "logger", "exts"] }
 uefi-services = "0.12.0"
+uefi-macros = "0.6.1"
 embedded-hal = "0.2.7"
 # for parsing acpi tables, given firmware implements them
 acpi = "4.1.0"
+log = { version = "0.4.11", default-features = false }
 
 # ! should be using this as an executable by its own before last stage bootloader, i.e. arcboot
 # maybe combine uefi + load sbi ABI, then arcboot
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 rustsbi = "0.2.2"
-riscv = "0.7.0"
+riscv = "0.8.0"
 riscv-rt = "0.8.1"
 
 # mostly cortex a support

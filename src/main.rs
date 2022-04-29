@@ -3,38 +3,37 @@
 #![feature(abi_efiapi)]
 
 // -------------
-//  FEATURES
-// -------------
-
-extern crate alloc;
-
-#[cfg(target_arch = "riscv64")]
-pub mod riscv64;
-
-#[cfg(target_arch = "aarch64")]
-pub mod aarch64;
-
-#[cfg(target_arch = "x86_64")]
-pub mod x86_64;
-
-pub mod drivers;
-
-// -------------
 //  ENTRY
 // -------------
 
-#[cfg(any(target_arch="aarch64", target_arch="x86_64"))]
+use core::ptr::null_mut;
 use uefi::prelude::*;
+use uefi::logger::Logger;
+use uefi::alloc::Allocator;
 
-#[cfg(any(target_arch="aarch64", target_arch="x86_64"))]
+struct Hi {}
+
+// I DONT THINK IT WORKS FOR RISCV
+// CREATE PR FOR IT
 #[entry]
 fn main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).unwrap();
 
-    Status::SUCCESS
-}
+    // init allocator
 
-#[cfg(target_arch = "riscv64")]
-extern "C" fn _start() {
-    loop {}
+    // trace_macros!(true);
+    // could use or something
+    // trace!("Hello, World!");
+    let allocator = Allocator{};
+    let s = "Hello World";
+
+    log::info!("Testing!");
+
+    // let logger = Logger {
+    //     writer: null_mut()
+    // };    
+
+    let _hi = Hi {};
+
+    Status::SUCCESS
 }

@@ -39,10 +39,12 @@ dependencies = [
  "acpi",
  "cortex-a",
  "embedded-hal",
- "riscv",
+ "log",
+ "riscv 0.8.0",
  "riscv-rt",
  "rustsbi",
  "uefi",
+ "uefi-macros",
  "uefi-services",
  "x86_64",
 ]
@@ -221,13 +223,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "riscv"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e2856a701069e2d262b264750d382407d272d5527f7a51d3777d1805b4e2d3c"
+dependencies = [
+ "bare-metal",
+ "bit_field",
+ "embedded-hal",
+]
+
+[[package]]
 name = "riscv-rt"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab9f28dc850356196a36078c51c9dc7b46014a29a8fde35d5f81c99e489d0e00"
 dependencies = [
  "r0",
- "riscv",
+ "riscv 0.7.0",
  "riscv-rt-macros",
  "riscv-target",
 ]
@@ -271,7 +284,7 @@ checksum = "039ff1f03eaf3ead3f6804b4e7abb7c5abd4f9e71b0483ebd554d78ce1298b5d"
 dependencies = [
  "embedded-hal",
  "nb 1.0.0",
- "riscv",
+ "riscv 0.7.0",
 ]
 
 [[package]]
