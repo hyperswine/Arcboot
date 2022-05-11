@@ -7,7 +7,6 @@ unstable-options = true
 # pass --release or --debug. Default is --debug
 barm = "build --target aarch64-unknown-none"
 bx86 = "build --target riscv64gc-unknown-none-elf"
-#* NOTE: ovmf (tianocore uefi firmware) doesnt support riscv as well apparently
 brv = "build --target x86_64-unknown-none"
 
 [build]
