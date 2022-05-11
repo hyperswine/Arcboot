@@ -24,6 +24,7 @@ goblin = { version = "0.5.1", default-features = false, features = [
     "endian_fd",
     "alloc",
 ] }
+linked_list_allocator = "0.9.1"
 
 # ? Maybe combine uefi + load sbi ABI, then arcboot
 [target.'cfg(target_arch = "riscv64")'.dependencies]
