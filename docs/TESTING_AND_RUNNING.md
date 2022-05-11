@@ -17,4 +17,4 @@ No support for 39/52/64 bit paging yet.
 
 Arcboot should be flashed onto a vhd file. QEMU should be run with OVMF firmware.
 
-To specify the vhd file `--disk=<main_disk.vhd>`. If everything goes well, QEMU should be able to load Arcboot into the host memory and hand off control to it in pseudo M mode.
+To specify the vhd file `--disk=<main_disk.vhd>`. If everything goes well, QEMU should be able to load Arcboot into the host memory and hand off control to it in M-mode/EL2.

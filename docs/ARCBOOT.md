@@ -14,3 +14,11 @@ NOTE: if EFI isnt needed, the arcboot partition will be simply flashed as a FAT3
 
 - an ARM based GPU like Mali or PowerVR can be used with ARM/RISCV processors. Neutron loads driver modules for those components based on MMIO. Arcboot tells Neutron via ACPI the graphics units available
 - Neutron should load its 3D graphics subsystem when a supported GPU is detected by ACPI
+
+Neutron and arcgraphics takes up the bulk of the logic base. Neutron is mostly responsible for memory management of graphics memory in either unified or dedicated memory modes. Command buffers are to be submitted, algorithms to schedule jobs, FIFOS and dual kernel buffer copies for max storage potential. (Maybe better to just use one)
+
+Arcgraphics is responsible for converting vulkan/wgpu cpu code into an executable API on the underlying Neutron Arcgraphics Driver and Neutron DRM.
+
+## Arcdrivers
+
+Arcdrivers are drivers that are loadable in arcboot and 'passable' to arcboot kernels. These drivers are generally quite simple and only wrap around the most basic of functionality after setting up MMIO. Functions like `open, close, read, write`. Some drivers like arcgpu comes in 3 phases, arcboot -> neutron -> arcgraphics.

@@ -7,32 +7,6 @@
 struct TimerDriver;
 struct ModelDriver;
 
-// * use uefi logger
-
-use uefi::logger::Logger;
-use uefi::proto::console::text::{Output, OutputMode};
-
-trait New {
-    fn new() -> Self;
-}
-
-// Generic File VFS
-
-// a file has support for groups and etc
-// each group has a set of permissions [R, W, X]
-const READ: u8 = 0x1;
-const WRITE: u8 = 0x2;
-const EXECUTE: u8 = 0x4;
-
-struct Group;
-
-struct File {
-    executable: bool,
-}
-struct Dir;
-// symlink
-struct Link;
-
 // -------------
 // Quick Filesystem Drivers
 // -------------
@@ -65,15 +39,16 @@ pub fn nefs(partition: &Partition) {}
 
 // if detect an nefs partition on GPT
 // load the driver
-
-// pub fn load_drivers() {
-//     // for each drive
-//     // check gpt tables for filesystems
-//     for drive in drives {
-//         if drive.id == NeFS_GUID {
-//             // load NeFS drivers if not loaded already
-//             load_nefs_driver();
-//             // do what it does
-//         }
-//     }
-// }
+/*
+pub fn load_drivers() {
+    // for each drive
+    // check gpt tables for filesystems
+    for drive in drives {
+        if drive.id == NeFS_GUID {
+            // load NeFS drivers if not loaded already
+            load_nefs_driver();
+            // do what it does
+        }
+    }
+}
+*/

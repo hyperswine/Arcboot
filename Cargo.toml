@@ -25,8 +25,8 @@ goblin = { version = "0.5.1", default-features = false, features = [
     "alloc",
 ] }
 linked_list_allocator = "0.9.1"
+qemu-exit = "3.0.1"
 
-# ? Maybe combine uefi + load sbi ABI, then arcboot
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 rustsbi = "0.2.2"
 riscv = "0.8.0"

@@ -42,6 +42,7 @@ dependencies = [
  "goblin",
  "linked_list_allocator",
  "log",
+ "qemu-exit",
  "riscv 0.8.0",
  "riscv-rt",
  "rustsbi",
@@ -190,6 +191,12 @@ checksum = "ec757218438d5fda206afc041538b2f6d889286160d649a86a24d37e1235afd1"
 dependencies = [
  "unicode-xid 0.2.2",
 ]
+
+[[package]]
+name = "qemu-exit"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ff023245bfcc73fb890e1f8d5383825b3131cc920020a5c487d6f113dfc428a"
 
 [[package]]
 name = "quote"
