@@ -4,20 +4,24 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-// FOR TESTS ONLY. Bootloader should have no heap though they can. Do not use alloc:: other than #[test_case]
-// ? Actually maybe just make one for both test and build
+// Bootloader should have no heap though they can. Mainly for tests and UEFI
 #![feature(alloc_error_handler)]
+
+// ---------------
+// API EXPORT
+// ---------------
 
 #[cfg(feature = "uefi_support")]
 pub mod uefi;
-
-// ---------------
-// ARCHITECTURES
-// ---------------
+pub mod memory;
 
 // OTHERWISE use uefi::alloc instead
 #[cfg(not(feature = "uefi_support"))]
 extern crate alloc;
+
+// ---------------
+// ARCHITECTURES
+// ---------------
 
 #[cfg(target_arch = "riscv64")]
 pub mod riscv64;
