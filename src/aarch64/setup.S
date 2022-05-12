@@ -18,26 +18,28 @@
 
 _setup:
     // core should be in EL2 after firmware has booted
+	// NOTE: seems to be the case with pi 4/rk 3399 but some other boards may not go into EL2
 	mrs	x0, CurrentEL
 	cmp	x0, {CONST_CURRENTEL_EL2}
-	b.ne	.L_parking_loop
+	b.ne	.L_halt
 
-    // hook onto the boot core
+    // ensure boot core is the current thread of execution
 	mrs	x1, MPIDR_EL1
 	and	x1, x1, {CONST_CORE_ID_MASK}
 	ldr	x2, BOOT_CORE_ID
 	cmp	x1, x2
-	b.ne	.L_parking_loop
+	b.ne	.L_halt
 
-	// startup dram
+// startup dram (rw section)
+.L_bss_init:
 	ADR_REL	x0, __bss_start
 	ADR_REL x1, __bss_end_exclusive
 
-.L_bss_init_loop:
 	cmp	x0, x1
 	b.eq	.L_prepare_rust
+	// basically store 0x80000 and 16 into xzr pair
 	stp	xzr, xzr, [x0], #16
-	b	.L_bss_init_loop
+	b	.L_bss_init
 
 .L_prepare_rust:
 	// stack pointer
@@ -46,9 +48,9 @@ _setup:
 
 	b	_start_rust
 
-.L_parking_loop:
+.L_halt:
 	wfe
-	b	.L_parking_loop
+	b	.L_halt
 
 // _setup() metadata
 .size	_setup, . - _setup

@@ -9,7 +9,7 @@
 // RENDEVOUS POINT
 // ----------------
 
-extern "C" fn _start() -> ! {
+extern "C" fn _main() -> ! {
     loop {}
 }
 

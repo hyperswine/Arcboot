@@ -4,7 +4,7 @@
 // IMPORTS
 // -------------
 
-use core::arch::global_asm;
+use core::arch::{global_asm, asm};
 
 use cortex_a::{asm::barrier, registers::*};
 
@@ -17,6 +17,8 @@ use tock_registers::{
 // ASM
 // -------------
 
+// ! For PI 4, the boot core is core 3 (4th core)
+// It might not the be same for other boards
 global_asm!(include_str!("setup.S"),
 CONST_CURRENTEL_EL2 = const 0x8,
 CONST_CORE_ID_MASK = const 0b11);
@@ -26,12 +28,8 @@ CONST_CORE_ID_MASK = const 0b11);
 // -------------
 
 #[no_mangle]
-pub unsafe extern "C" fn _start_rust(phys_boot_core_stack_end_exclusive_addr: u64) -> ! {
-    prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr);
-    cortex_a::asm::eret()
-}
-
-unsafe fn kernel_init() -> ! {
+pub unsafe extern "C" fn _start_rust() -> ! {
+    asm!("b _main");
     loop {}
 }
 
@@ -40,8 +38,13 @@ unsafe fn kernel_init() -> ! {
 // ---------------
 
 /// Arcboot Kernels to go into EL1
+/// Takes a non parametrised function to eret to
+/// Must setup sp in your linker, prob to 0xfff000... vaddr
 #[inline(always)]
-pub unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_addr: u64) {
+pub unsafe fn prepare_el2_to_el1_transition(
+    kernel_init: fn(),
+    sp: u64,
+) {
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
     CNTVOFF_EL2.set(0);
@@ -56,7 +59,8 @@ pub unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_a
     );
 
     ELR_EL2.set(kernel_init as *const () as u64);
-    SP_EL1.set(phys_boot_core_stack_end_exclusive_addr);
+    SP_EL1.set(sp);
+    cortex_a::asm::eret();
 }
 
 // -------------
@@ -65,6 +69,7 @@ pub unsafe fn prepare_el2_to_el1_transition(phys_boot_core_stack_end_exclusive_a
 
 // Default = 48 bit VA with 3 level page tables
 // No segmentation support
+// No heap export, assumes kernel implements its own heap allocation
 
 const PAGE_SIZE: usize = 4096;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
@@ -79,4 +84,19 @@ struct VirtualAddress48 {
     l2_index: PageTableIndex,
     l3_index: PageTableIndex,
     ttbr_number: u16,
+}
+
+// In order to bookkeep page tables, require a pointer and a page fault handler
+// Or non existent page handler
+
+macro_rules! register_handler {
+    () => {};
+}
+
+fn on_page_fault() {
+    // if page does not exist in the page table
+    // create a mapping using the next free frame
+    let next_free_frame: usize;
+
+    // or page is swapped to disk
 }

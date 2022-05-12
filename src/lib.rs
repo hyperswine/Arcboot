@@ -45,7 +45,7 @@ pub mod test;
 
 #[no_mangle]
 #[cfg(test)]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _main() -> ! {
     test_main();
 
     loop {}
