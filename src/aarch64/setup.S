@@ -1,4 +1,21 @@
+// Load the address of a symbol into a register, PC-relative
+.macro ADR_REL register, symbol
+	adrp	\register, \symbol
+	add	\register, \register, #:lo12:\symbol
+.endm
+
+// Load the address of a symbol into a register, absolute
+.macro ADR_ABS register, symbol
+	movz	\register, #:abs_g3:\symbol
+	movk	\register, #:abs_g2_nc:\symbol
+	movk	\register, #:abs_g1_nc:\symbol
+	movk	\register, #:abs_g0_nc:\symbol
+.endm
+
+// _setup() with ARM64 ABI
+.section .text._setup
 .global _setup
+
 _setup:
     // core should be in EL2 after firmware has booted
 	mrs	x0, CurrentEL
@@ -32,3 +49,8 @@ _setup:
 .L_parking_loop:
 	wfe
 	b	.L_parking_loop
+
+// _setup() metadata
+.size	_setup, . - _setup
+.type	_setup, function
+.global	_setup

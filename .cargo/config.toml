@@ -12,3 +12,7 @@ tarm = "test --target aarch64-unknown-none --no-run"
 
 [build]
 out-dir = "build"
+
+[target.aarch64-unknown-none]
+rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
+runner = "qemu-system-aarch64 -M virt -cpu cortex-a57 -nographic -kernel build/arcboot -serial mon:stdio"

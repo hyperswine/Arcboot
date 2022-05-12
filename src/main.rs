@@ -5,6 +5,10 @@
 #![test_runner(arcboot::test::test_runner)]
 #![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
 
+// ----------------
+// RENDEVOUS POINT
+// ----------------
+
 extern "C" fn _start() -> ! {
     loop {}
 }

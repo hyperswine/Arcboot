@@ -10,6 +10,16 @@ For complete systems like Pi4, Arcboot does not have a "vision" of what it is. I
 
 NOTE: if EFI isnt needed, the arcboot partition will be simply flashed as a FAT32/QFS partition rather than an EFS partition.
 
+## Arcboot Compliant Kernel
+
+An arcboot compliant kernel image should:
+
+- be in an ELF64 executable format. With its sp loaded at or above 0xffff8000... Its text/RO segments are near the top. And its data/bss is right below the sp if they are needed
+
+### Static Linking
+
+It is possible to statically link an arcboot kernel with arcboot itself. Then `cargo run` and other cargo commands can be run directly without the need for arcutils. This however does not simulate a real world scenario and is mostly useful for testing only.
+
 ## Graphics
 
 - an ARM based GPU like Mali or PowerVR can be used with ARM/RISCV processors. Neutron loads driver modules for those components based on MMIO. Arcboot tells Neutron via ACPI the graphics units available

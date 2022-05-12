@@ -6,6 +6,8 @@
 #![reexport_test_harness_main = "test_main"]
 // Bootloader should have no heap though they can. Mainly for tests and UEFI
 #![feature(alloc_error_handler)]
+// REQUIRED TO DEFINE CONSTANTS IN ASM
+#![feature(asm_const)]
 
 // ---------------
 // API EXPORT
