@@ -15,11 +15,11 @@
 
 #[cfg(feature = "uefi_support")]
 pub mod uefi;
-pub mod memory;
+// pub mod memory;
 
 // OTHERWISE use uefi::alloc instead
-#[cfg(not(feature = "uefi_support"))]
-extern crate alloc;
+// #[cfg(not(feature = "uefi_support"))]
+// extern crate alloc;
 
 // ---------------
 // ARCHITECTURES

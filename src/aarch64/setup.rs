@@ -4,20 +4,17 @@
 // IMPORTS
 // -------------
 
-use core::arch::{global_asm, asm};
+use core::arch::{asm, global_asm};
 
-use cortex_a::{asm::barrier, registers::*};
+use cortex_a::registers::*;
 
-use tock_registers::{
-    interfaces::{Readable, Writeable},
-    registers::InMemoryRegister,
-};
+use tock_registers::interfaces::Writeable;
 
 // -------------
 // ASM
 // -------------
 
-// ! For PI 4, the boot core is core 3 (4th core)
+// For PI 4, the boot core is core 3 (4th core)
 // It might not the be same for other boards
 global_asm!(include_str!("setup.S"),
 CONST_CURRENTEL_EL2 = const 0x8,
@@ -41,10 +38,7 @@ pub unsafe extern "C" fn _start_rust() -> ! {
 /// Takes a non parametrised function to eret to
 /// Must setup sp in your linker, prob to 0xfff000... vaddr
 #[inline(always)]
-pub unsafe fn prepare_el2_to_el1_transition(
-    kernel_init: fn(),
-    sp: u64,
-) {
+pub unsafe fn prepare_el2_to_el1_transition(kernel_init: fn(), sp: u64) {
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
 
     CNTVOFF_EL2.set(0);
@@ -89,6 +83,7 @@ struct VirtualAddress48 {
 // In order to bookkeep page tables, require a pointer and a page fault handler
 // Or non existent page handler
 
+#[macro_export]
 macro_rules! register_handler {
     () => {};
 }

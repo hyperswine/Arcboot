@@ -1,7 +1,7 @@
 ENTRY(_setup)
 
 /* 
-1. setup sp at at a relatively safe paddr, 0x400000, set it to grow up? Down is fine too but the other segments must be loaded at the proper locations in physical RAM
+1. setup sp at at a relatively safe paddr, 0x80000, set it to grow up? Down is fine too but the other segments must be loaded at the proper locations in physical RAM
 2. load .text, .data, .rodata, .bss as usual
 */
 
@@ -14,6 +14,7 @@ DRAM_LOAD_ADDR = 0x0;
 BINARY_LOAD_ADDR = 0x80000;
 
 /* Ensure boot core stack is set to load */
+/* RO = 4, RX = 5, RW = 6, RWX = 7 */
 PHDRS
 {
     segment_code            PT_LOAD FLAGS(5);
@@ -25,6 +26,7 @@ SECTIONS {
     . = BINARY_LOAD_ADDR;
 
 	/* READ ONLY SEGMENTS */
+    __code_start = .;
 	.text : AT(BINARY_LOAD_ADDR)
     {
         KEEP(*(.text._setup))
@@ -33,6 +35,8 @@ SECTIONS {
         *(.text*)
     } :segment_code
 	.rodata : ALIGN(8) { *(.rodata*) } :segment_code
+    /* global offset table */
+    .got    : ALIGN(8) { *(.got)     } :segment_code
 
 	. = ALIGN(PAGE_SIZE_LD);
     __code_end_exclusive = .;
