@@ -1,8 +1,8 @@
 # Arcboot Bootloader
 
-The main bootloader images for riscv, arm and x86. I want to optimise for riscv though.
+The main bootloader images for riscv, arm and x86. I want to optimise for riscv but gonna do arm for now.
 
-- all asm and linker scripts for arcboot itself and neutron is contained here. Mostly for building a UEFI app that sets the right registers after BIOS, disables interrupts, sets up a stack pointer, heap pointer, etc. for temp bootloader use on physical memory. Then sets up paging and SBI, sets the registers again and passes higher abstracted structures to the kernel
+- NOTE: rust does not yet have tier 3 support for riscv-uefi, but you can just add an PE header to a binary blob anyway. I.e. no symtab/etc. lookups and build the entire thing into a single text section
 
 ```bash
 cargo bx86 -> builds for x86_64

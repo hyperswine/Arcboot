@@ -5,7 +5,8 @@ unstable-options = true
 
 [alias]
 # pass --release or --debug. Default is --debug
-barm = "build --target aarch64-unknown-none"
+barm = "build --target aarch64-unknown-uefi"
+barmelf = "build --target aarch64-unknown-none"
 bx86 = "build --target riscv64gc-unknown-none-elf"
 brv = "build --target x86_64-unknown-none"
 tarm = "test --target aarch64-unknown-none --no-run"
@@ -13,6 +14,6 @@ tarm = "test --target aarch64-unknown-none --no-run"
 [build]
 out-dir = "build"
 
-[target.aarch64-unknown-none]
+[target.aarch64-unknown-uefi]
 rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
 runner = "qemu-system-aarch64 -M virt -cpu cortex-a57 -nographic -kernel build/arcboot -serial mon:stdio"
