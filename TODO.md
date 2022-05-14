@@ -9,6 +9,10 @@
 
 Its possible to precompile C sources. Then link those object together as well as a header API. ASM can be included into rust directly. And global asm is apparently stable now. So I guess Im just doing it wrong.
 
+### Combining UEFI
+
+uefi-rs seems to implement a lot of the specs already.
+
 ## Export API
 
 Arcboot exports an API with 3 modules and a few functions to help setup an arcboot compliant kernel and to then request services from the arcboot environment. The arcboot env includes the SEE on riscv and seems like limine.
