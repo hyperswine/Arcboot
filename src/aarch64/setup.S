@@ -12,11 +12,11 @@
 	movk	\register, #:abs_g0_nc:\symbol
 .endm
 
-// _setup() with ARM64 ABI
-.section .text._setup
-.global _setup
+// _start() with ARM64 ABI
+.section .text._start
+.global _start
 
-_setup:
+_start:
     // core should be in EL2 after firmware has booted
 	// NOTE: seems to be the case with pi 4/rk 3399 but some other boards may not go into EL2
 	mrs	x0, CurrentEL
@@ -52,7 +52,7 @@ _setup:
 	wfe
 	b	.L_halt
 
-// _setup() metadata
-.size	_setup, . - _setup
-.type	_setup, function
-.global	_setup
+// _start() metadata
+.size	_start, . - _start
+.type	_start, function
+.global	_start

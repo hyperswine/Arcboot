@@ -1,4 +1,4 @@
-ENTRY(_setup)
+ENTRY(_start)
 
 /* 
 1. setup sp at at a relatively safe paddr, 0x80000, set it to grow up? Down is fine too but the other segments must be loaded at the proper locations in physical RAM
@@ -29,7 +29,7 @@ SECTIONS {
     __code_start = .;
 	.text : AT(BINARY_LOAD_ADDR)
     {
-        KEEP(*(.text._setup))
+        KEEP(*(.text._start))
         *(.text._start_arguments)
         *(.text._start_rust)
         *(.text*)
