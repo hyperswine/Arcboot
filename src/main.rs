@@ -25,12 +25,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 
 extern crate alloc;
 
-use alloc::string::String;
 use log::info;
 use tock_registers::interfaces::Readable;
 use uefi::prelude::*;
-use uefi::proto::console::serial::Serial;
-use uefi::table::boot::{OpenProtocolAttributes, OpenProtocolParams};
 use uefi_services;
 
 // I DONT THINK IT WORKS FOR RISCV. Needs a PR
@@ -58,6 +55,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         // curr_el.read(field);
         let val = curr_el.get();
         info!("current EL = {}", val);
+        
     }
 
     Status::SUCCESS

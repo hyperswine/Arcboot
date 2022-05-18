@@ -1,5 +1,6 @@
 # TODO
 
+- run the thing in qemu with either xtask or a command
 - set the stack up at 0x6M. Then go into EL2
 
 ## C & ASM Stubs
