@@ -9,17 +9,15 @@
 // REQUIRED TO DEFINE CONSTANTS IN ASM
 #![feature(asm_const)]
 
+extern crate alloc;
+
 // ---------------
 // API EXPORT
 // ---------------
 
 #[cfg(feature = "uefi_support")]
 pub mod uefi;
-// pub mod memory;
-
-// OTHERWISE use uefi::alloc instead
-// #[cfg(not(feature = "uefi_support"))]
-// extern crate alloc;
+pub mod memory;
 
 // ---------------
 // ARCHITECTURES

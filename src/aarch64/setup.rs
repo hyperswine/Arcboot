@@ -5,9 +5,7 @@
 // -------------
 
 use core::arch::{asm, global_asm};
-
 use cortex_a::registers::*;
-
 use tock_registers::interfaces::Writeable;
 
 // -------------
@@ -16,9 +14,8 @@ use tock_registers::interfaces::Writeable;
 
 // For PI 4, the boot core is core 3 (4th core)
 // It might not the be same for other boards
-global_asm!(include_str!("setup.S"),
-CONST_CURRENTEL_EL2 = const 0x8,
-CONST_CORE_ID_MASK = const 0b11);
+const CONST_CURRENTEL_EL2L: u64 = 0x8;
+const CONST_CORE_ID_MASK: u64 = 0b11;
 
 // -------------
 // Start Rust
@@ -28,6 +25,28 @@ CONST_CORE_ID_MASK = const 0b11);
 pub unsafe extern "C" fn _start_rust() -> ! {
     asm!("b _main");
     loop {}
+}
+
+#[inline(always)]
+pub unsafe fn transition_el3_to_el2() {
+    CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
+
+    CNTVOFF_EL2.set(0);
+    HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+
+    SPSR_EL2.write(
+        SPSR_EL2::D::Masked
+            + SPSR_EL2::A::Masked
+            + SPSR_EL2::I::Masked
+            + SPSR_EL2::F::Masked
+            + SPSR_EL2::M::EL1h,
+    );
+
+    // ? stack starts at 0x06M for uefi bootloader
+    const STACK_START: u64 = 0x6000000;
+
+    SP_EL1.set(STACK_START);
+    cortex_a::asm::eret();
 }
 
 // ---------------
