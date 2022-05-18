@@ -26,6 +26,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 extern crate alloc;
 
 use alloc::string::String;
+use log::info;
 use uefi::prelude::*;
 use uefi::proto::console::serial::Serial;
 use uefi::table::boot::{OpenProtocolAttributes, OpenProtocolParams};
@@ -33,7 +34,8 @@ use uefi_services;
 
 // I DONT THINK IT WORKS FOR RISCV. Needs a PR
 #[entry]
-fn efi_main(_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    uefi_services::init(&mut system_table).unwrap();
+fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
+    uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
+    info!("Booted!");
     Status::SUCCESS
 }

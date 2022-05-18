@@ -9,7 +9,7 @@ use cortex_a::registers::*;
 use tock_registers::interfaces::Writeable;
 
 // -------------
-// ASM
+// COMMON
 // -------------
 
 // For PI 4, the boot core is core 3 (4th core)
@@ -17,16 +17,7 @@ use tock_registers::interfaces::Writeable;
 const CONST_CURRENTEL_EL2L: u64 = 0x8;
 const CONST_CORE_ID_MASK: u64 = 0b11;
 
-// -------------
-// Start Rust
-// -------------
-
-#[no_mangle]
-pub unsafe extern "C" fn _start_rust() -> ! {
-    asm!("b _main");
-    loop {}
-}
-
+// TODO
 #[inline(always)]
 pub unsafe fn transition_el3_to_el2() {
     CNTHCTL_EL2.write(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
@@ -47,6 +38,17 @@ pub unsafe fn transition_el3_to_el2() {
 
     SP_EL1.set(STACK_START);
     cortex_a::asm::eret();
+}
+
+// -------------
+// Start Rust (NO UEFI)
+// -------------
+
+#[cfg(not(feature = "uefi_support"))]
+#[no_mangle]
+pub unsafe extern "C" fn _start_rust() -> ! {
+    asm!("b _main");
+    loop {}
 }
 
 // ---------------

@@ -1,9 +1,6 @@
 # TODO
 
-- something isnt working, idk what. Im guessing its something to do with the structure cause the non setup.S also seems to fail
-- maybe ENTRY(_start) is wrong somehow or IDK. Its just not creating the ELF image properly from the physical addresses and assembly Im giving it
-- new feature: allow an arcboot kernel to be completely writable in rust using arcboot export functions
-- since uefi-rs seems to have done quite a bit of what we want for us, maybe we just use that by default
+- set the stack up at 0x6M. Then go into EL2
 
 ## C & ASM Stubs
 
@@ -12,6 +9,7 @@ Its possible to precompile C sources. Then link those object together as well as
 ### Combining UEFI
 
 uefi-rs seems to implement a lot of the specs already.
+[Here](https://retrage.github.io/edk2-nightly/) is a convenient place to get the nightly EDK2 images.
 
 ## Export API
 

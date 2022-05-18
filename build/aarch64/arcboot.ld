@@ -1,5 +1,7 @@
 ENTRY(_start)
 
+/* Might not be needed for UEFI */
+
 /* 
 1. setup sp at at a relatively safe paddr, 0x80000, set it to grow up? Down is fine too but the other segments must be loaded at the proper locations in physical RAM
 2. load .text, .data, .rodata, .bss as usual

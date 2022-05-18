@@ -10,10 +10,13 @@ barmelf = "build --target aarch64-unknown-none"
 bx86 = "build --target riscv64gc-unknown-none-elf"
 brv = "build --target x86_64-unknown-none"
 tarm = "test --target aarch64-unknown-none --no-run"
+rarm = "run --target aarch64-unknown-uefi --features uefi_support"
 
 [build]
 out-dir = "build"
 
 [target.aarch64-unknown-uefi]
-rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
+# NOT FOR UEFI
+# rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
+# TODO: pass ovmf code + vars to qemu
 runner = "qemu-system-aarch64 -M virt -cpu cortex-a57 -nographic -kernel build/arcboot -serial mon:stdio"
