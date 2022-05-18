@@ -27,6 +27,7 @@ extern crate alloc;
 
 use alloc::string::String;
 use log::info;
+use tock_registers::interfaces::Readable;
 use uefi::prelude::*;
 use uefi::proto::console::serial::Serial;
 use uefi::table::boot::{OpenProtocolAttributes, OpenProtocolParams};
@@ -37,5 +38,27 @@ use uefi_services;
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
     info!("Booted!");
+
+    // GO INTO EL2 IF NOT ALREADY
+    // unsafe {
+    //     const EL2_ID: u64 = 0x8;
+    //     const CORE_ID_MASK: u64 = 0b11;
+    //     core::arch::asm!(
+    //         "
+    //         mrs x0, CurrentEL
+    //         cmp x0, {EL2_ID}
+    //         "
+    //     );
+    // }
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        use cortex_a::registers;
+        let curr_el = registers::CurrentEL;
+        // curr_el.read(field);
+        let val = curr_el.get();
+        info!("current EL = {}", val);
+    }
+
     Status::SUCCESS
 }
