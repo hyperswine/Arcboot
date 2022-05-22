@@ -1,0 +1,7 @@
+# This is a QEMU VFAT dir
+# When testing builds, just copy the kernel.img into here
+# Technically there should be two partitions
+# 1. to store the EFI boot img
+# 2. to store neutron kernel img
+
+# When testing arcboot, just specify -kernel arcboot.efi with or without a drive. With a drive, just copy arcboot.efi into /EFI/aarch64/. And specify -drive fat:build/aarch64/qemu

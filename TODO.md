@@ -12,6 +12,8 @@ Its possible to precompile C sources. Then link those object together as well as
 uefi-rs seems to implement a lot of the specs already.
 [Here](https://retrage.github.io/edk2-nightly/) is a convenient place to get the nightly EDK2 images.
 
+I think its basically `-disk if=bios.bin` for OVMF_EFI.fd.
+
 ## Export API
 
 Arcboot exports an API with 3 modules and a few functions to help setup an arcboot compliant kernel and to then request services from the arcboot environment. The arcboot env includes the SEE on riscv and seems like limine.

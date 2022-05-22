@@ -16,7 +16,8 @@ rarm = "run --target aarch64-unknown-uefi --features uefi_support"
 out-dir = "build"
 
 [target.aarch64-unknown-uefi]
-# NOT FOR UEFI
-# rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
-# TODO: pass ovmf code + vars to qemu
-runner = "qemu-system-aarch64 -M virt -cpu cortex-a57 -nographic -kernel build/arcboot -serial mon:stdio"
+# Pass ovmf vars to qemu as well (do it with -disk or -drive)
+runner = "qemu-system-aarch64 -M virt -cpu cortex-a57 -bios ./build/aarch64/OVMF_EFI.fd -kernel build/arcboot.efi -serial mon:stdio -nographic"
+
+[target.cfg.target_feature.no_uefi]
+rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
