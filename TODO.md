@@ -1,7 +1,7 @@
 # TODO
 
-- run the thing in qemu with xtask or arcutils. Dont use xtask for neutron, just arcutils?
-- set the stack up at 0x6M. Then go into EL2
+- use the vfat properly
+- set the stack pointer up at 0x6M. Then go into EL2
 
 ## C & ASM Stubs
 
