@@ -3,3 +3,4 @@ arcutils*
 *rlib
 disasm*
 *.efi
+out
