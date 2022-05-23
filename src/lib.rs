@@ -13,7 +13,12 @@
 // CRATE WIDE USE
 // ---------------
 
+#[macro_use]
+extern crate log;
+
 extern crate alloc;
+
+pub mod efi;
 
 // ---------------
 // API EXPORT

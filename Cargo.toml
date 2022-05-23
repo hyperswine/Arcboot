@@ -6,13 +6,13 @@ name = "arcboot"
 version = "0.1.0"
 
 [dependencies]
-uefi = { version = "0.15.0", features = [
+uefi = { version = "0.16.0", features = [
     "alloc",
     "logger",
     "exts",
 ], optional = true }
-uefi-services = { version = "0.12.0", optional = true }
-uefi-macros = { version = "0.6.1", optional = true }
+uefi-services = { version = "0.13.0", optional = true }
+uefi-macros = { version = "0.7.0", optional = true }
 acpi = { version = "4.1.0", optional = true }
 embedded-hal = "0.2.7"
 log = { version = "0.4.11", default-features = false }

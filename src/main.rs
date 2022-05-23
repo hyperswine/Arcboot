@@ -48,46 +48,63 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     check_revision(system_table.uefi_revision());
 
     // Test all the boot services.
+    info!("Testing boot services...");
+
     let bt = system_table.boot_services();
 
     // Try retrieving a handle to the file system the image was booted from.
+    // I dunno if there is a filesystem for it cause I didnt specify
+    // It didnt work last time so maybe I didnt specify something right
     bt.get_image_file_system(image)
         .expect("Failed to retrieve boot file system");
 
-    // boot::test(bt);
+    // TESTS TO ENSURE A WORKING SYSTEM
 
-    // Test all the supported protocols.
-    // proto::test(image, &mut system_table);
+    arcboot::efi::boot::test(bt);
 
-    // runtime services work before boot services are exited, but we'd
-    // probably want to test them after exit_boot_services. However,
-    // exit_boot_services is currently called during shutdown.
+    arcboot::efi::proto::test(image, &mut system_table);
 
-    // runtime::test(system_table.runtime_services());
+    arcboot::efi::runtime::test(system_table.runtime_services());
 
-    // ? its not being able to load the hardware properly into UEFI/ACPI tables or something
-    // #[cfg(target_arch = "aarch64")]
-    // {
-    //     use cortex_a::registers;
-    //     let curr_el = registers::CurrentEL;
-    //     let val = curr_el.get();
-    //     info!("current EL = {}", val);
-    //     // GO INTO EL2 IF NOT ALREADY
-    //     unsafe {
-    //         const EL2_ID: u64 = 0x8;
-    //         const CORE_ID_MASK: u64 = 0b11;
-    //         core::arch::asm!(
-    //             "
-    //             mrs x0, CurrentEL
-    //             cmp x0, {EL2_ID}
-    //             "
-    //         );
-    //     }
-    // }
+    // BOOT PROTOCOL
+
+    #[cfg(target_arch = "aarch64")]
+    transition_to_el2();
+
+    // HAND OFF TO KERNEL
+    // search for an arcboot compliant kernel.elf img. Or a default kernel partition
+    // rn just exits
+    load_arcboot_kernel();
+
+    // Kernel returns, shutdown system
+    // NOTE: kernel should return 0. If not, log to /logs/<timestamp.log> [KERNEL EXIT FAILURE]
 
     info!("Success!");
 
     shutdown(image, system_table);
+}
+
+fn load_arcboot_kernel() {}
+
+fn transition_to_el2() {
+    use cortex_a::registers;
+    let curr_el = registers::CurrentEL;
+    let val = curr_el.get();
+
+    info!("current EL = {}", val);
+
+    // GO INTO EL2 IF NOT ALREADY
+    unsafe {
+        const EL2_ID: u64 = 0x8;
+        const CORE_ID_MASK: u64 = 0b11;
+        // ! its not being able to load the hardware properly into UEFI/ACPI tables or something
+        // core::arch::asm!(
+        //     "
+        //         mrs x0, CurrentEL
+        //         cmp x0, {EL2_ID}
+        //     "
+        // );
+    }
 }
 
 // Taken from the uefi-test-runner
@@ -130,3 +147,7 @@ fn shutdown(image: uefi::Handle, mut st: SystemTable<Boot>) -> ! {
     let rt = unsafe { st.runtime_services() };
     rt.reset(ResetType::Shutdown, Status::SUCCESS, None);
 }
+
+// --------------
+// TEST
+// --------------
