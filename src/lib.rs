@@ -56,7 +56,7 @@ pub extern "C" fn _main() -> ! {
     loop {}
 }
 
-#[cfg(test)]
+#[cfg(all(not(feature = "uefi_support"), test))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {}

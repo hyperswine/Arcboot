@@ -40,4 +40,5 @@ aarch64 = "*"
 x86_64 = "0.14.9"
 
 [features]
+default = ["uefi_support"]
 uefi_support = ["dep:uefi", "dep:uefi-services", "dep:uefi-macros", "dep:acpi"]

@@ -104,11 +104,6 @@ struct VirtualAddress48 {
 // In order to bookkeep page tables, require a pointer and a page fault handler
 // Or non existent page handler
 
-#[macro_export]
-macro_rules! register_handler {
-    () => {};
-}
-
 fn on_page_fault() {
     // if page does not exist in the page table
     // create a mapping using the next free frame
