@@ -5,6 +5,11 @@ license = "GPL-3.0-only"
 name = "arcboot"
 version = "0.1.0"
 
+[workspace]
+members = [
+    "export"
+]
+
 [dependencies]
 uefi = { version = "0.16.0", features = [
     "alloc",

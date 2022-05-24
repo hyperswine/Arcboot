@@ -4,3 +4,4 @@ arcutils*
 disasm*
 *.efi
 out
+libarcboot*
