@@ -37,6 +37,7 @@ version = "0.1.0"
 dependencies = [
  "aarch64",
  "acpi",
+ "arcboot_api",
  "cortex-a",
  "embedded-hal",
  "goblin",

@@ -6,9 +6,7 @@ name = "arcboot"
 version = "0.1.0"
 
 [workspace]
-members = [
-    "export"
-]
+members = ["export"]
 
 [dependencies]
 uefi = { version = "0.16.0", features = [
@@ -32,6 +30,9 @@ goblin = { version = "0.5.1", default-features = false, features = [
 linked_list_allocator = "0.9.1"
 qemu-exit = "3.0.1"
 
+# API
+arcboot_api = { path = "./export", optional = true }
+
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 rustsbi = "0.2.2"
 riscv = "0.8.0"
@@ -47,3 +48,5 @@ x86_64 = "0.14.9"
 [features]
 default = ["uefi_support"]
 uefi_support = ["dep:uefi", "dep:uefi-services", "dep:uefi-macros", "dep:acpi"]
+# API
+api = ["arcboot_api"]
