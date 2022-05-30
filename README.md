@@ -8,3 +8,7 @@ A uefi bootloader for riscv, arm and x86. Comes in the form of an executable and
 ## Running
 
 Be sure to `chmod +x run.sh`!
+
+## Arcdriver
+
+Arc drivers are low level code that can be transferred from the bootloader to the kernel. In the form of a dynamically linked library. The arcdrivers are placed in `/arc/driver/<driver>.so`. If neutron is built with ARC_DRIVER=true, then it will not link with drivers like nefs, graphics and wifi/eth. It will instead assume they exist. And the neutron driver module should be able to find them while iterating through a list of available drivers to load. If the arcdriver code (just a vdso) is linked properly
