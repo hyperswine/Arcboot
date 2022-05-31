@@ -27,8 +27,8 @@ extern crate alloc;
 
 use core::arch::asm;
 
-use aarch64::regs::{ELR_EL2, HCR_EL2, SPSR_EL3, ELR_EL3};
-use cortex_a::{registers, asm};
+use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3};
+use cortex_a::{asm, registers};
 use log::info;
 use tock_registers::interfaces::{Readable, Writeable};
 use uefi::{
@@ -43,16 +43,15 @@ use uefi_services;
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
 
-    // maybe its failing right after this line
-    info!("Booted!");
+    info!("Entry into arcboot!");
 
-    // Reset the console before running all the other tests.
+    // Reset the console before running all the other tests
     system_table
         .stdout()
         .reset(false)
         .expect("Failed to reset stdout");
 
-    // Ensure the tests are run on a version of UEFI we support.
+    // Ensure the tests are run on a version of UEFI we support
     check_revision(system_table.uefi_revision());
 
     // Test all the boot services.
@@ -60,9 +59,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let bt = system_table.boot_services();
 
-    // Try retrieving a handle to the file system the image was booted from.
-    // I dunno if there is a filesystem for it cause I didnt specify
-    // It didnt work last time so maybe I didnt specify something right
+    // Try retrieving a handle to the file system the image was booted from
     bt.get_image_file_system(image)
         .expect("Failed to retrieve boot file system");
 
@@ -78,10 +75,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     #[cfg(target_arch = "aarch64")]
     transition_to_el2();
-    asm::eret();
-
-    // wait we just need to specify load_arcboot_kernel I think
-    // then asm::eret()
 
     // HAND OFF TO KERNEL
     // search for an arcboot compliant kernel.elf img. Or a default kernel partition
@@ -99,11 +92,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     shutdown(image, system_table);
 }
 
-fn done() {
+// rn doesnt return
+// can then register a shutdown() fn from kernel which calls shutdown() here
+// or just returns to main
+pub fn load_arcboot_kernel() {
     info!("current EL = {}", registers::CurrentEL.get());
 }
-
-fn load_arcboot_kernel() {}
 
 fn transition_to_el2() {
     use cortex_a::registers;
@@ -111,16 +105,16 @@ fn transition_to_el2() {
 
     info!("current EL = {}", curr_el);
 
-    // GO INTO EL1 IF NOT ALREADY
-    if curr_el != 2 {
-        // uh so we dont need this?
-        // HCR_EL2.write(HCR_EL2::RW::AllLowerELsAreAarch32);
+    // NOTE: EL2 is actually 0x4 (0100), which is EL1 I think
+    // 0x8 is EL2. The EL value is in bit 2 and 3. b1100 = EL3, b1000 = EL2, b0100 = EL1. b0000 = EL0
 
-        // can be done before kernel Id say. Or in kernel
-        // HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+    // GO INTO EL2 IF NOT ALREADY
+    // NOTE: EFI already puts us into EL1??
+    if curr_el < 0x4 {
+        // transition_to_el2();
 
-        // Set up a simulated exception return.
-        // this actually does make an exception but its not handled
+        // maybe i didnt initialise the registers
+        info!("Setting EL3 -> El2 return masks. Disable interrupts");
         SPSR_EL3.write(
             SPSR_EL3::D::Masked
                 + SPSR_EL3::A::Masked
@@ -129,20 +123,23 @@ fn transition_to_el2() {
                 + SPSR_EL3::M::EL2h,
         );
 
-        ELR_EL3.set(done as *const () as u64);
+        info!("Setting EL3 return function...");
+        // getting an exception here...
+        ELR_EL3.set(load_arcboot_kernel as *const () as u64);
 
-        // set stack pointer to like 0x1000000
-        // apparently doesnt work for EL2
-
-        // might have to set an exception handler for 0
-        // otherwise simulate it?
+        // maybe didnt set stack properly
+        // SP_EL2.set(0x1000000);
         // unsafe {
         //     asm!(
         //         "
-        //         HVC 0
+        //         MSR 0x1000000 SP_EL2
         //         "
         //     );
         // }
+        // im actually getting an exception at 0x00000000404801F0
+        // when there shouldnt be one
+        info!("About to return from exception...");
+        asm::eret();
     }
 }
 
