@@ -25,8 +25,12 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 
 extern crate alloc;
 
+use core::arch::asm;
+
+use aarch64::regs::{ELR_EL2, HCR_EL2, SPSR_EL3, ELR_EL3};
+use cortex_a::{registers, asm};
 use log::info;
-use tock_registers::interfaces::Readable;
+use tock_registers::interfaces::{Readable, Writeable};
 use uefi::{
     prelude::*,
     proto::console::serial::Serial,
@@ -74,6 +78,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     #[cfg(target_arch = "aarch64")]
     transition_to_el2();
+    asm::eret();
+
+    // wait we just need to specify load_arcboot_kernel I think
+    // then asm::eret()
 
     // HAND OFF TO KERNEL
     // search for an arcboot compliant kernel.elf img. Or a default kernel partition
@@ -91,25 +99,50 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     shutdown(image, system_table);
 }
 
+fn done() {
+    info!("current EL = {}", registers::CurrentEL.get());
+}
+
 fn load_arcboot_kernel() {}
 
 fn transition_to_el2() {
     use cortex_a::registers;
-    let curr_el = registers::CurrentEL;
-    let val = curr_el.get();
+    let curr_el = registers::CurrentEL.get();
 
-    info!("current EL = {}", val);
+    info!("current EL = {}", curr_el);
 
-    // GO INTO EL2 IF NOT ALREADY
-    unsafe {
-        const EL2_ID: u64 = 0x8;
-        const CORE_ID_MASK: u64 = 0b11;
-        // core::arch::asm!(
-        //     "
-        //         mrs x0, CurrentEL
-        //         cmp x0, {EL2_ID}
-        //     "
-        // );
+    // GO INTO EL1 IF NOT ALREADY
+    if curr_el != 2 {
+        // uh so we dont need this?
+        // HCR_EL2.write(HCR_EL2::RW::AllLowerELsAreAarch32);
+
+        // can be done before kernel Id say. Or in kernel
+        // HCR_EL2.write(HCR_EL2::RW::EL1IsAarch64);
+
+        // Set up a simulated exception return.
+        // this actually does make an exception but its not handled
+        SPSR_EL3.write(
+            SPSR_EL3::D::Masked
+                + SPSR_EL3::A::Masked
+                + SPSR_EL3::I::Masked
+                + SPSR_EL3::F::Masked
+                + SPSR_EL3::M::EL2h,
+        );
+
+        ELR_EL3.set(done as *const () as u64);
+
+        // set stack pointer to like 0x1000000
+        // apparently doesnt work for EL2
+
+        // might have to set an exception handler for 0
+        // otherwise simulate it?
+        // unsafe {
+        //     asm!(
+        //         "
+        //         HVC 0
+        //         "
+        //     );
+        // }
     }
 }
 
@@ -134,12 +167,8 @@ fn shutdown(image: uefi::Handle, mut st: SystemTable<Boot>) -> ! {
     st.stdout().reset(false).unwrap();
 
     // Inform the user, and give him time to read on real hardware
-    if cfg!(not(feature = "qemu")) {
-        info!("Testing complete, shutting down in 3 seconds...");
-        st.boot_services().stall(3_000_000);
-    } else {
-        info!("Testing complete, shutting down...");
-    }
+    info!("Testing complete, shutting down in 3 seconds...");
+    st.boot_services().stall(3_000_000);
 
     // Exit boot services as a proof that it works :)
     let sizes = st.boot_services().memory_map_size();
