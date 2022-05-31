@@ -12,3 +12,35 @@ Like Oreboot and GRUB, Arcboot is a multiboot UEFI bootloader. For stages 1 and 
 We assume a conventional EFI boot flow for an armv8a system.
 
 First the firmware boots up and eventually gets to loading a suitable bootloader. It finds an EFI system partition (FAT32) and goes into /EFI/boot.efi to load the PE image (most code segment) into memory.
+
+## UEFI
+
+The services UEFI supports:
+
+```c
+typedef
+EFI_STATUS
+GetVariable (
+IN CHAR16* VariableName,
+IN EFI_GUID* VendorGuid,
+OUT UINT32* Attributes OPTIONAL,
+IN OUT UINTN* DataSize,
+OUT VOID* Data OPTIONAL
+);
+typedef
+EFI_STATUS
+GetNextVariableName (
+IN OUT UINTN *VariableNameSize,
+IN OUT CHAR16 *VariableName,
+IN OUT EFI_GUID *VendorGuid
+);
+typedef
+EFI_STATUS
+SetVariable (
+IN CHAR16 *VariableName,
+IN EFI_GUID *VendorGuid,
+IN UINT32 Attributes,
+IN UINTN DataSize,
+IN VOID *Data
+);
+```

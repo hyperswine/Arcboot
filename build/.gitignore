@@ -2,3 +2,6 @@ arcboot
 arcutils*
 *rlib
 disasm*
+*.efi
+out
+libarcboot*

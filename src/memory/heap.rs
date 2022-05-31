@@ -1,15 +1,18 @@
 // QUICK ALLOC FOR TESTS AND OTHER STUFF LIKE UEFI WHICH MAY BE GOOD WITH IT
 // IDK WHERE TO PUT HEAP, MAYBE AT 0x50000
 
+// should use https://docs.rs/context-allocator/latest/context_allocator/
+// to init_heap() and register this as the default allocator
+
 use linked_list_allocator::{self, LockedHeap};
 
-#[global_allocator]
+// #[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-#[alloc_error_handler]
-fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
-}
+// #[alloc_error_handler]
+// fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+//     panic!("allocation error: {:?}", layout)
+// }
 
 pub fn init_heap() {
     unsafe {
@@ -17,5 +20,6 @@ pub fn init_heap() {
     }
 }
 
-pub const HEAP_START: usize = 0xff00_0000_0000_0000;
+// depends on how much RAM/if paging is on
+pub const HEAP_START: usize = 0x10000;
 pub const HEAP_SIZE: usize = 4 * 0x1000;
