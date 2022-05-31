@@ -64,15 +64,8 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     loop {}
 }
 
-// TEST SHOULD BE FINE? uefi_services defines a panic handler
+// PANIC HANDLER FOR TEST, prob not needed
 #[cfg_attr(test, panic_handler)]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {}
-}
-
-// uefi_services defines a panic handle, even with cfg(test)
-// TEST HANDLER ALLOC
-#[cfg_attr(test, alloc_error_handler)]
-fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
 }

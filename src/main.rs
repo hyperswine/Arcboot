@@ -14,6 +14,7 @@ extern crate alloc;
 use core::{arch::asm, ptr::NonNull};
 
 use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3};
+use arcboot::{write_uart, write_serial_line, write_uart_line};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -30,7 +31,11 @@ use uefi_services;
 // I DONT THINK IT WORKS FOR RISCV? I know U-boot works
 #[entry]
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    // might just have to init them manually
+    // -----------
+    // UEFI BootServices
+    // -----------
+
+    // might just have to init them manually since alloc seems to be a bit of a problem
     uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
 
     // should initialise logger and allocator if using custom logging (or just manually without init)
@@ -86,10 +91,17 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // -----------
 
     // logger to UART0
+    write_uart_line!(b"Hello from runtime!");
 
     // linked list allocator
+    // something went wrong here. I thought uefi alloc was disabled? Unless alloc is bound the old one still?
+    // its not binding properly I think or the memory ranges are off. We shouldnt be going over because its not crashing
+    arcboot::memory::heap::init_heap();
 
-    //
+    write_uart_line!(b"Heap initialised!");
+
+    // alloc doesnt work or something
+    // write_serial_line!("Hi!");
 
     // setup new virtual table
     // st.set_virtual_address_map(map, new_system_table_virtual_addr);
