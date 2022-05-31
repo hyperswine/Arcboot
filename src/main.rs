@@ -27,7 +27,11 @@ extern crate alloc;
 
 use log::info;
 use tock_registers::interfaces::Readable;
-use uefi::prelude::*;
+use uefi::{
+    prelude::*,
+    proto::console::serial::Serial,
+    table::boot::{OpenProtocolAttributes, OpenProtocolParams},
+};
 use uefi_services;
 
 // I DONT THINK IT WORKS FOR RISCV? I know U-boot works
@@ -79,6 +83,9 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // Kernel returns, shutdown system
     // NOTE: kernel should return 0. If not, log to /logs/<timestamp.log> [KERNEL EXIT FAILURE]
 
+    // IDK why test requires mut ref so this doesnt work
+    // bt.stall(3_000_000);
+
     info!("Success!");
 
     shutdown(image, system_table);
@@ -97,7 +104,6 @@ fn transition_to_el2() {
     unsafe {
         const EL2_ID: u64 = 0x8;
         const CORE_ID_MASK: u64 = 0b11;
-        // ! its not being able to load the hardware properly into UEFI/ACPI tables or something
         // core::arch::asm!(
         //     "
         //         mrs x0, CurrentEL
