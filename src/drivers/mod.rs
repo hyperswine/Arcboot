@@ -10,35 +10,16 @@ struct ModelDriver;
 // -------------
 // Quick Filesystem Drivers
 // -------------
+// use qfs;
 
 // -------------
 // Neutron Filesystem Drivers
 // -------------
-
-type RootFS = u64;
-
-// storage of filesystem metadata in memory
-struct NeFSPartition {
-    partition: Partition,
-    root_fs: RootFS,
-}
-
-// for GPT
-const NeFS_GUID: u128 = 0x1FF;
-
-// contains the offset + size for the partition on disk
-pub struct Partition {
-    id: u64,
-    offset: u64,
-    size: u64,
-}
-
-// given a nefs partition, collect data on it
-// from the headers and stuff
-pub fn nefs(partition: &Partition) {}
+// use nefs;
 
 // if detect an nefs partition on GPT
-// load the driver
+// load the arc driver into memory as a read only part
+// at some page range
 /*
 pub fn load_drivers() {
     // for each drive

@@ -15,12 +15,11 @@
 
 #[macro_use]
 extern crate log;
-
 extern crate alloc;
 
 pub mod efi;
-
 pub mod qemu;
+pub mod logger;
 
 // ---------------
 // API EXPORT
@@ -45,12 +44,6 @@ pub mod x86_64;
 // TESTING
 // ----------------
 
-// TEST SHOULD BE FINE?
-#[cfg_attr(test, panic_handler)]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
-
 pub trait Testable {
     fn run(&self) -> ();
 }
@@ -71,6 +64,13 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     loop {}
 }
 
+// TEST SHOULD BE FINE? uefi_services defines a panic handler
+#[cfg_attr(test, panic_handler)]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+// uefi_services defines a panic handle, even with cfg(test)
 // TEST HANDLER ALLOC
 #[cfg_attr(test, alloc_error_handler)]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {

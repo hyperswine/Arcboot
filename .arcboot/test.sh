@@ -3,6 +3,7 @@
 # OUT1 - lib target
 # OUT2 - bin target
 # for test_case, always run test_case or something
+# TODO: convert scripts into arc commands
 
 cargo tarm | LIB_TGT=grep "Finished" && \
 cd .arcboot && \

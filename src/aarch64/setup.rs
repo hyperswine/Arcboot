@@ -133,7 +133,7 @@ pub unsafe fn prepare_el2_to_el1_transition(kernel_init: fn(), sp: u64) {
 const PAGE_SIZE: usize = 4096;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
-type PageTableIndex = [bool; 10];
+type PageTableIndex = [bool; 9];
 type PageTableOffset = [bool; 12];
 
 #[repr(C)]
