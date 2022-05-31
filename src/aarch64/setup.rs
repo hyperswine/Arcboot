@@ -6,7 +6,7 @@
 
 use core::arch::{asm, global_asm};
 use cortex_a::registers::*;
-use tock_registers::interfaces::Writeable;
+use tock_registers::interfaces::{Readable, Writeable};
 
 // -------------
 // COMMON
@@ -54,6 +54,50 @@ pub unsafe extern "C" fn _start_rust() -> ! {
 // ---------------
 // EXPORT API
 // ---------------
+
+fn transition_to_el2() {
+    use cortex_a::registers;
+    let curr_el = registers::CurrentEL.get();
+
+    info!("current EL = {}", curr_el);
+
+    // EL2 is actually 0x8 (1000). 0x4 is EL1
+    // The EL value is in bit 2 and 3. b1100 = EL3, b1000 = EL2, b0100 = EL1. b0000 = EL0
+
+    // GO INTO EL2 IF NOT ALREADY
+    // NOTE: EFI already puts us into EL1??
+    if curr_el < 0x4 {
+        // transition_to_el2();
+
+        // NOTE, if your in EL1 or EL2 you will get an unprivileged access exception
+
+        info!("Setting EL3 -> El2 return masks. Disable interrupts");
+        SPSR_EL3.write(
+            SPSR_EL3::D::Masked
+                + SPSR_EL3::A::Masked
+                + SPSR_EL3::I::Masked
+                + SPSR_EL3::F::Masked
+                + SPSR_EL3::M::EL2h,
+        );
+
+        info!("Setting EL3 return function...");
+        // ELR_EL3.set(load_arcboot_kernel as *const () as u64);
+
+        // NOTE: need to also set the stack
+        // SP_EL2.set(0x1000000);
+        // unsafe {
+        //     asm!(
+        //         "
+        //         MRS SP_EL2 #0x1000000
+        //         "
+        //     );
+        // }
+        // im actually getting an exception at 0x00000000404801F0
+        // when there shouldnt be one
+        info!("About to return from exception...");
+        cortex_a::asm::eret();
+    }
+}
 
 /// Arcboot Kernels to go into EL1
 /// Takes a non parametrised function to eret to

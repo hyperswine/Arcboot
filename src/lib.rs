@@ -1,9 +1,9 @@
 #![no_std]
-#![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
-#![test_runner(crate::test::test_runner)]
+#![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
 // Bootloader should have no heap though they can. Mainly for tests and UEFI
 #![feature(alloc_error_handler)]
 // REQUIRED TO DEFINE CONSTANTS IN ASM
@@ -19,6 +19,8 @@ extern crate log;
 extern crate alloc;
 
 pub mod efi;
+
+pub mod qemu;
 
 // ---------------
 // API EXPORT
@@ -43,21 +45,34 @@ pub mod x86_64;
 // TESTING
 // ----------------
 
-pub mod test;
-
-// NOTE: use the same panic handler as the standard build for testing
-// Also, an entry for unit/integration testing is needed in lib
-
-#[no_mangle]
-#[cfg(test)]
-pub extern "C" fn _main() -> ! {
-    test_main();
-
+// TEST SHOULD BE FINE?
+#[cfg_attr(test, panic_handler)]
+fn panic(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-#[cfg(all(not(feature = "uefi_support"), test))]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        self();
+    }
+}
+
+pub fn test_runner(tests: &[&dyn Testable]) {
+    for test in tests {
+        test.run();
+    }
     loop {}
+}
+
+// TEST HANDLER ALLOC
+#[cfg_attr(test, alloc_error_handler)]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
 }
