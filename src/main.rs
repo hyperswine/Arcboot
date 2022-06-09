@@ -13,7 +13,7 @@ extern crate alloc;
 
 use core::{arch::asm, ptr::NonNull};
 
-use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3};
+use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3, CurrentEL};
 use arcboot::{write_uart, write_serial_line, write_uart_line};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
@@ -92,6 +92,19 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     // logger to UART0
     write_uart_line!(b"Hello from runtime!");
+    let curr_el = CurrentEL.get();
+    assert_eq!(curr_el, 0x4);
+    write_uart_line!(b"Current EL =!");
+
+    // TLBI ALLE1
+    // before kernel loads userspace, do TLBI ALLE0
+
+    // i think the kernel's pages should be be made global
+    // so nG=0
+    // to save pid space
+
+    // you can also remap the kernel's own page tables to a process' page table
+    // that means some pages will be already be used for code, data, etc. And you dont need to reset the control reg that points to the base of that core (or task). Maybe you have to actually, depending on your task implementation
 
     // linked list allocator
     // something went wrong here. I thought uefi alloc was disabled? Unless alloc is bound the old one still?
