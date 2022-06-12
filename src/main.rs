@@ -13,8 +13,8 @@ extern crate alloc;
 
 use core::{arch::asm, ptr::NonNull};
 
-use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3, CurrentEL, MAIR_EL1};
-use arcboot::{write_uart, write_uart_line, aarch64::drivers::{print_serial, _print_serial}, print_serial_line};
+use aarch64::regs::{CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SPSR_EL3, TTBR0_EL1, TTBR1_EL1, TCR_EL1::{self, EPD0::EnableTTBR0Walks}, TTBR0_EL2};
+use arcboot::{aarch64::drivers::_print_serial, print_serial_line, write_uart, write_uart_line};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -98,8 +98,27 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     // get memory info
     let mem = MAIR_EL1.get();
-    _print_serial(core::format_args!("MAIR EL1 = {}", mem));
-    print_serial_line!("MAIR EL1 = {}", mem);
+    _print_serial(format_args!("MAIR EL1 = {mem:#b}\n"));
+
+    let mem = TTBR0_EL1.get();
+    _print_serial(format_args!("TTBR0 EL1 = {mem:#b}\n"));
+
+    let mem = TTBR1_EL1.get();
+    _print_serial(format_args!("TTBR1 EL1 = {mem:#b}\n"));
+
+    // let mem = TCR_EL1::EPD1::Value;
+    // _print_serial(format_args!("TCR EL1 = {mem:#b}\n"));
+
+    let mem = TTBR0_EL2.get();
+    _print_serial(format_args!("TTBR0 EL2 = {mem:#b}\n"));
+
+    // i think EnableTTBR1Walks sets TTBCR
+    // no it actually sets TCR_EL1, one of the flags
+    _print_serial(format_args!("Enabling TTBR0 walks...\n"));
+    // EnableTTBR0Walks.
+
+    // print_serial_line!("");
+    // print_serial_line!("MAIR EL1 = {}", mem);
 
     // TLBI ALLE1
     // before kernel loads userspace, do TLBI ALLE0

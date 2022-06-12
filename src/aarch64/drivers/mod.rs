@@ -77,7 +77,7 @@ impl fmt::Write for Uart {
     }
 }
 
-pub fn _print_serial(args: core::fmt::Arguments) {
+pub fn _print_serial(args: fmt::Arguments) {
     Uart::new()
         .expect("Concurrent UART access!")
         .write_fmt(args)
@@ -96,7 +96,7 @@ macro_rules! print_serial {
 #[macro_export]
 macro_rules! print_serial_line {
     () => {
-        () => (print_serial!("\n"));
-        ($($arg:tt)*) => (print_serial!("{}\n", format_args!($($arg)*)));
+        () => ($crate::print_serial!("\n"));
+        ($($arg:tt)*) => ($crate::print_serial!("{}\n", format_args!($($arg)*)));
     };
 }
