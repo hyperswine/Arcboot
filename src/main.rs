@@ -34,7 +34,7 @@ use uefi::{
     },
 };
 
-// I DONT THINK IT WORKS FOR RISCV? I know U-boot works
+// For RISC-V, use U-Boot
 #[entry]
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // -----------
@@ -47,6 +47,13 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let s = String::from("Hi");
     info!("s = {s}");
+    // 0x478071a8 is the address sometimes
+    // ??? id expect it to be 0x80000. Maybe something with virtual memory/not id mapped?
+    info!("address of s = {:p}", &s);
+
+    // can you somehow inspect the memory address directly?
+    // prob. We have to know where its allocating as well
+    // maybe Box or something. A pointer to Box
 
     // this uses uefi's internal alloc and logger
     // uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
