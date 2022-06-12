@@ -29,6 +29,7 @@ goblin = { version = "0.5.1", default-features = false, features = [
 ] }
 linked_list_allocator = "0.9.1"
 qemu-exit = "3.0.1"
+one_alloc = { version = "0.1.0", git = "https://github.com/ardaku/one_alloc" }
 
 # API
 arcboot_api = { path = "./export", optional = true }

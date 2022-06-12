@@ -13,8 +13,8 @@ extern crate alloc;
 
 use core::{arch::asm, ptr::NonNull};
 
-use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3, CurrentEL};
-use arcboot::{write_uart, write_serial_line, write_uart_line};
+use aarch64::regs::{ELR_EL2, ELR_EL3, HCR_EL2, SPSR_EL3, CurrentEL, MAIR_EL1};
+use arcboot::{write_uart, write_uart_line, aarch64::drivers::{print_serial, _print_serial}, print_serial_line};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -95,6 +95,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let curr_el = CurrentEL.get();
     assert_eq!(curr_el, 0x4);
     write_uart_line!(b"Current EL =!");
+
+    // get memory info
+    let mem = MAIR_EL1.get();
+    _print_serial(core::format_args!("MAIR EL1 = {}", mem));
+    print_serial_line!("MAIR EL1 = {}", mem);
 
     // TLBI ALLE1
     // before kernel loads userspace, do TLBI ALLE0

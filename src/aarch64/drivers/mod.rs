@@ -1,8 +1,11 @@
-// common stuff
-
-// UART DRIVER
-
 use alloc::string::ToString;
+use core::{
+    fmt::{self, Write},
+    ops::Not,
+    sync::atomic::{AtomicBool, Ordering},
+};
+
+// NAIVE UART OUT
 
 #[macro_export]
 macro_rules! write_uart {
@@ -37,47 +40,38 @@ macro_rules! write_uart_line {
     };
 }
 
-#[macro_export]
-macro_rules! write_serial {
-    ($($arg:tt)*) => (arcboot::aarch64::drivers::_print_serial(format_args!($($arg)*)));
-}
+// UART DRIVER
 
-#[macro_export]
-macro_rules! write_serial_line {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::write_serial!("{}\n", format_args!($($arg)*)));
-}
+/// Could prob put this in drivers and have an AARCH64 ArcDriverManager that impls UART and reexports the write_str
+pub struct Uart(usize);
 
-pub fn _print_serial(args: core::fmt::Arguments) {
-    // if alloc doesnt work, this wont work
-    let a = args.to_string();
-    write_uart!(a.as_bytes());
-}
-
-/*
-pub struct Uart(());
-
-static IN_USE: AtomicBool = AtomicBool:::new(false);
+static IN_USE: AtomicBool = AtomicBool::new(false);
 
 impl Uart {
+    /// Lazily create an UART out, or if already exists, returns it directly
     pub fn new() -> Option<Uart> {
         impl Drop for Uart {
-            fn drop(&mut self) { IN_USE.store(false, Ordering::Release); }
+            fn drop(&mut self) {
+                IN_USE.store(false, Ordering::Release);
+            }
         }
 
-        IN_USE.swap(true, Ordering::Acquire).not().then(|| Uart(()))
+        IN_USE
+            .swap(true, Ordering::Acquire)
+            .not()
+            .then(|| Uart(0x09000000_usize))
     }
 }
 
 impl fmt::Write for Uart {
-    fn write_str (self: &'_ mut Uart, s: &'_ str)
-      -> fmt::Result
-    {
-        const UART_ADDR: *mut u8 = 0x09000000_usize as _;
+    fn write_str(self: &'_ mut Uart, s: &'_ str) -> fmt::Result {
+        let uart_addr: *mut u8 = self.0 as _;
         s.bytes().for_each(|b| unsafe {
-            UART_ADDR.write_volatile(
-                if matches!(b, 0x20..=0x7e | b'\n') { b } else { 0xfe }
-            )
+            uart_addr.write_volatile(if matches!(b, 0x20..=0x7e | b'\n') {
+                b
+            } else {
+                0xfe
+            })
         });
         Ok(())
     }
@@ -87,6 +81,22 @@ pub fn _print_serial(args: core::fmt::Arguments) {
     Uart::new()
         .expect("Concurrent UART access!")
         .write_fmt(args)
-        .unwrap() // we just wrote the impl, this is unreachable
+        .unwrap()
 }
-*/
+
+/// Use this in most cases
+#[macro_export]
+macro_rules! print_serial {
+    () => {
+        ($($arg:tt)*) => ($crate::aarch64::drivers::_print_serial(format_args!($($arg)*)));
+    };
+}
+
+/// Use this in most cases
+#[macro_export]
+macro_rules! print_serial_line {
+    () => {
+        () => (print_serial!("\n"));
+        ($($arg:tt)*) => (print_serial!("{}\n", format_args!($($arg)*)));
+    };
+}

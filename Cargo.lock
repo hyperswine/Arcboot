@@ -43,6 +43,7 @@ dependencies = [
  "goblin",
  "linked_list_allocator",
  "log",
+ "one_alloc",
  "qemu-exit",
  "riscv 0.8.0",
  "riscv-rt",
@@ -177,6 +178,11 @@ name = "nb"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "546c37ac5d9e56f55e73b677106873d9d9f5190605e41a856503623648488cae"
+
+[[package]]
+name = "one_alloc"
+version = "0.1.0"
+source = "git+https://github.com/ardaku/one_alloc#09a516017557c4c9d8163f395a6c2fbcaa9e46b1"
 
 [[package]]
 name = "plain"
