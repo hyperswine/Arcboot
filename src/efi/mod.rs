@@ -6,7 +6,6 @@ pub mod runtime;
 pub mod proto;
 pub mod acpi;
 
-// Taken from the uefi-test-runner
 pub fn check_revision(rev: uefi::table::Revision) {
     let (major, minor) = (rev.major(), rev.minor());
 
@@ -19,7 +18,6 @@ pub fn check_revision(rev: uefi::table::Revision) {
     );
 }
 
-// Taken from the uefi-test-runner
 pub fn shutdown(mut st: SystemTable<Runtime>) -> ! {
     // Shut down the system
     let rt = unsafe { st.runtime_services() };

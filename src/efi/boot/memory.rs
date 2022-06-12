@@ -40,6 +40,7 @@ fn vec_alloc() {
     info!("Allocating a vector through the `alloc` crate");
 
     let mut values = vec![-5, 16, 23, 4, 0];
+    info!("Values = {values:?}");
 
     values.sort_unstable();
 

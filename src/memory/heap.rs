@@ -20,11 +20,11 @@ pub fn init_heap() {
     }
 }
 
-// depends on how much RAM/if paging is on
-// virtual mem is identity mapped at first
-// maybe a problem with this
-// grows up towards higher vals
-// at 524KB DRAM, unless theres some hole
 // 524K - 590K
+// no exception so should work. Just that the values are off
 pub const HEAP_START: usize = 0x80000;
 pub const HEAP_SIZE: usize = 16 * 0x1000;
+
+// getting an exception here. So the above should work?
+// pub const HEAP_START: usize = 0x_4444_4444_0000;
+// pub const HEAP_SIZE: usize = 100 * 1024;

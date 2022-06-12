@@ -22,7 +22,12 @@ impl Log for RuntimeLogger {
         Uart::new().is_some()
     }
 
+    /// Cannot log if anotherr task is using the same output stream
+    /// Could prob spinlock on it
     fn log(&self, record: &Record) {
+        // spinlock
+        // while !self.enabled(record.metadata()) {}
+
         if self.enabled(record.metadata()) {
             print_serial_line!("{} - {}", record.level(), record.args());
         }

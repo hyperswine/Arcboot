@@ -41,8 +41,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // UEFI BootServices
     // -----------
 
-    init_runtime_logger();
+    assert!(init_runtime_logger().is_ok());
+    // ? Maybe endianess? But UEFI should be little endian I think
     init_heap();
+
+    let s = String::from("Hi");
+    info!("s = {s}");
 
     // this uses uefi's internal alloc and logger
     // uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
@@ -73,7 +77,9 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     arcboot::efi::proto::test(image, &mut system_table);
     arcboot::efi::runtime::test(system_table.runtime_services());
 
+    // -----------
     // BOOT PROTOCOL
+    // -----------
 
     info!("Initialising boot protocol");
 
@@ -94,7 +100,8 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         .expect("Failed to exit boot services");
 
     // bootservices no longer exists, cannot access stdout and stuff
-    // prob doesnt really matter much. Paging is identity still
+    // paging is identity mapped with a singular L1 table I think, for DRAM frames
+    // since if you try to access something higher it page faults
 
     // -----------
     // LOAD ARCBOOT DRIVERS
@@ -133,21 +140,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // so nG=0
     // to save pid space
 
-    // you can also remap the kernel's own page tables to a process' page table
-    // that means some pages will be already be used for code, data, etc. And you dont need to reset the control reg that points to the base of that core (or task). Maybe you have to actually, depending on your task implementation
-
-    // linked list allocator
-    // something went wrong here. I thought uefi alloc was disabled? Unless alloc is bound the old one still?
-    // its not binding properly I think or the memory ranges are off. We shouldnt be going over because its not crashing
-    arcboot::memory::heap::init_heap();
     let s = String::from("Hello");
 
     print_serial_line!("s = {s}!");
 
     print_serial_line!("Heap initialised!");
-
-    // alloc doesnt work or something
-    // write_serial_line!("Hi!");
 
     // setup new virtual table
     // st.set_virtual_address_map(map, new_system_table_virtual_addr);
@@ -159,7 +156,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // Kernel returns, shutdown system
     // NOTE: kernel should return 0. If not, log to /logs/<timestamp.log> [KERNEL EXIT FAILURE]
 
-    // info!("Shutting down arcboot!");
+    info!("Shutting down arcboot!");
 
     arcboot::efi::shutdown(st);
 }
