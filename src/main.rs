@@ -33,7 +33,6 @@ use uefi::{
         Runtime,
     },
 };
-use uefi_services;
 
 // I DONT THINK IT WORKS FOR RISCV? I know U-boot works
 #[entry]
@@ -168,12 +167,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 pub fn load_arcboot_kernel() {}
 
 // ----------------
-// BARE BIOS PANIC
+// PANIC
 // ----------------
 
-#[cfg(not(feature = "uefi_support"))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
+    print_serial_line!("Panicked at {info}");
     loop {}
 }
 

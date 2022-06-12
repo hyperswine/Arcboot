@@ -52,7 +52,6 @@ dependencies = [
  "tock-registers",
  "uefi",
  "uefi-macros",
- "uefi-services",
  "x86_64",
 ]
 
@@ -464,17 +463,6 @@ dependencies = [
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.95",
-]
-
-[[package]]
-name = "uefi-services"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fa8d57b5388d35f8203951a41ef64672a93a5ce2a00414f63b73fe96d9c5348"
-dependencies = [
- "cfg-if",
- "log",
- "uefi",
 ]
 
 [[package]]
