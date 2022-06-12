@@ -9,11 +9,8 @@ version = "0.1.0"
 members = ["export"]
 
 [dependencies]
-uefi = { version = "0.16.0", features = [
-    "alloc",
-    "logger",
-    "exts",
-], optional = true }
+# NOTE: no alloc or log or exts. Exts seems useful but uses its own allocator
+uefi = { version = "0.16.0", features = ["exts"], optional = true }
 uefi-services = { version = "0.13.0", optional = true }
 uefi-macros = { version = "0.7.0", optional = true }
 acpi = { version = "4.1.0", optional = true }
@@ -34,6 +31,10 @@ one_alloc = { version = "0.1.0", git = "https://github.com/ardaku/one_alloc" }
 # API
 arcboot_api = { path = "./export", optional = true }
 
+[dependencies.lazy_static]
+version = "1.4.0"
+features = ["spin_no_std"]
+
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 rustsbi = "0.2.2"
 riscv = "0.8.0"
@@ -51,3 +52,4 @@ default = ["uefi_support"]
 uefi_support = ["dep:uefi", "dep:uefi-services", "dep:uefi-macros", "dep:acpi"]
 # API
 api = ["arcboot_api"]
+archypervisor = []

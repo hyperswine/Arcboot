@@ -11,10 +11,17 @@
 
 extern crate alloc;
 
+use aarch64::regs::{
+    CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SPSR_EL3,
+    TCR_EL1::{self, EPD0::EnableTTBR0Walks},
+    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
+};
+use alloc::string::String;
+use arcboot::{
+    aarch64::drivers::_print_serial, logger::init_runtime_logger, memory::heap::init_heap,
+    print_serial_line, write_uart, write_uart_line,
+};
 use core::{arch::asm, ptr::NonNull};
-
-use aarch64::regs::{CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SPSR_EL3, TTBR0_EL1, TTBR1_EL1, TCR_EL1::{self, EPD0::EnableTTBR0Walks}, TTBR0_EL2};
-use arcboot::{aarch64::drivers::_print_serial, print_serial_line, write_uart, write_uart_line};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -35,11 +42,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // UEFI BootServices
     // -----------
 
-    // might just have to init them manually since alloc seems to be a bit of a problem
-    uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
+    init_runtime_logger();
+    init_heap();
 
-    // should initialise logger and allocator if using custom logging (or just manually without init)
-    // otherwise uefi-rs automatically handles it
+    // this uses uefi's internal alloc and logger
+    // uefi_services::init(&mut system_table).expect("Failed to initialize utilities");
 
     info!("Entry into arcboot!");
 
@@ -71,8 +78,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     info!("Initialising boot protocol");
 
-    // IF HYPERVISOR feature is on, trap into EL2 instead
-    // since we are at EL1
+    // IF HYPERVISOR feature is on, trap into EL2 instead since we are at EL1
+    fn trap_to_el2() {}
+    #[cfg(feature = "archypervisor")]
+    trap_to_el2();
 
     // Exit boot services as a proof that it works :)
     let sizes = system_table.boot_services().memory_map_size();
@@ -84,41 +93,39 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let (st, _iter) = system_table
         .exit_boot_services(image, &mut mmap_storage[..])
         .expect("Failed to exit boot services");
-    // bootservices no longer exists. Use our own implementations for better control
+
+    // bootservices no longer exists, cannot access stdout and stuff
+    // prob doesnt really matter much. Paging is identity still
 
     // -----------
     // LOAD ARCBOOT DRIVERS
     // -----------
 
-    // logger to UART0
-    write_uart_line!(b"Hello from runtime!");
+    print_serial_line!("Hello from runtime!");
     let curr_el = CurrentEL.get();
     assert_eq!(curr_el, 0x4);
-    write_uart_line!(b"Current EL =!");
+    print_serial_line!("Current EL = {}", curr_el);
 
-    // get memory info
     let mem = MAIR_EL1.get();
-    _print_serial(format_args!("MAIR EL1 = {mem:#b}\n"));
+    print_serial_line!("MAIR EL1 = {mem:#b}\n");
 
     let mem = TTBR0_EL1.get();
-    _print_serial(format_args!("TTBR0 EL1 = {mem:#b}\n"));
+    print_serial_line!("TTBR0 EL1 = {mem:#b}\n");
 
     let mem = TTBR1_EL1.get();
-    _print_serial(format_args!("TTBR1 EL1 = {mem:#b}\n"));
+    print_serial_line!("TTBR1 EL1 = {mem:#b}\n");
 
     // let mem = TCR_EL1::EPD1::Value;
-    // _print_serial(format_args!("TCR EL1 = {mem:#b}\n"));
+    // print_serial_line!("TCR EL1 = {mem:#b}\n"));
 
-    let mem = TTBR0_EL2.get();
-    _print_serial(format_args!("TTBR0 EL2 = {mem:#b}\n"));
+    // apparently doesnt work with macro?
+    // let mem = TTBR0_EL2.get();
+    // print_serial_line!("TTBR0 EL2 = {mem:#b}\n");
 
     // i think EnableTTBR1Walks sets TTBCR
     // no it actually sets TCR_EL1, one of the flags
-    _print_serial(format_args!("Enabling TTBR0 walks...\n"));
+    print_serial_line!("Enabling TTBR0 walks...\n");
     // EnableTTBR0Walks.
-
-    // print_serial_line!("");
-    // print_serial_line!("MAIR EL1 = {}", mem);
 
     // TLBI ALLE1
     // before kernel loads userspace, do TLBI ALLE0
@@ -134,8 +141,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // something went wrong here. I thought uefi alloc was disabled? Unless alloc is bound the old one still?
     // its not binding properly I think or the memory ranges are off. We shouldnt be going over because its not crashing
     arcboot::memory::heap::init_heap();
+    let s = String::from("Hello");
 
-    write_uart_line!(b"Heap initialised!");
+    print_serial_line!("s = {s}!");
+
+    print_serial_line!("Heap initialised!");
 
     // alloc doesnt work or something
     // write_serial_line!("Hi!");

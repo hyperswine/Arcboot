@@ -87,16 +87,12 @@ pub fn _print_serial(args: fmt::Arguments) {
 /// Use this in most cases
 #[macro_export]
 macro_rules! print_serial {
-    () => {
-        ($($arg:tt)*) => ($crate::aarch64::drivers::_print_serial(format_args!($($arg)*)));
-    };
+    ($($arg:tt)*) => ($crate::aarch64::drivers::_print_serial(format_args!($($arg)*)));
 }
 
 /// Use this in most cases
 #[macro_export]
 macro_rules! print_serial_line {
-    () => {
-        () => ($crate::print_serial!("\n"));
-        ($($arg:tt)*) => ($crate::print_serial!("{}\n", format_args!($($arg)*)));
-    };
+    () => ($crate::print_serial!("\n"));
+    ($($arg:tt)*) => ($crate::print_serial!("{}\n", format_args!($($arg)*)));
 }

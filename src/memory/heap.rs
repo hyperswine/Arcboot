@@ -6,13 +6,13 @@
 
 use linked_list_allocator::{self, LockedHeap};
 
-// #[global_allocator]
+#[global_allocator]
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
-// #[alloc_error_handler]
-// fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-//     panic!("allocation error: {:?}", layout)
-// }
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
 
 pub fn init_heap() {
     unsafe {
@@ -21,5 +21,10 @@ pub fn init_heap() {
 }
 
 // depends on how much RAM/if paging is on
-pub const HEAP_START: usize = 0x10000;
-pub const HEAP_SIZE: usize = 4 * 0x1000;
+// virtual mem is identity mapped at first
+// maybe a problem with this
+// grows up towards higher vals
+// at 524KB DRAM, unless theres some hole
+// 524K - 590K
+pub const HEAP_START: usize = 0x80000;
+pub const HEAP_SIZE: usize = 16 * 0x1000;
