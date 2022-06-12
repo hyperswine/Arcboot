@@ -157,18 +157,17 @@
 #include "acdispat.h"
 #include "acnamesp.h"
 
-#define _COMPONENT          ACPI_DISPATCHER
-        ACPI_MODULE_NAME    ("dsargs")
+#define _COMPONENT ACPI_DISPATCHER
+ACPI_MODULE_NAME("dsargs")
 
 /* Local prototypes */
 
 static ACPI_STATUS
-AcpiDsExecuteArguments (
-    ACPI_NAMESPACE_NODE     *Node,
-    ACPI_NAMESPACE_NODE     *ScopeNode,
-    UINT32                  AmlLength,
-    UINT8                   *AmlStart);
-
+AcpiDsExecuteArguments(
+    ACPI_NAMESPACE_NODE *Node,
+    ACPI_NAMESPACE_NODE *ScopeNode,
+    UINT32 AmlLength,
+    UINT8 *AmlStart);
 
 /*******************************************************************************
  *
@@ -186,26 +185,24 @@ AcpiDsExecuteArguments (
  ******************************************************************************/
 
 static ACPI_STATUS
-AcpiDsExecuteArguments (
-    ACPI_NAMESPACE_NODE     *Node,
-    ACPI_NAMESPACE_NODE     *ScopeNode,
-    UINT32                  AmlLength,
-    UINT8                   *AmlStart)
+AcpiDsExecuteArguments(
+    ACPI_NAMESPACE_NODE *Node,
+    ACPI_NAMESPACE_NODE *ScopeNode,
+    UINT32 AmlLength,
+    UINT8 *AmlStart)
 {
-    ACPI_STATUS             Status;
-    ACPI_PARSE_OBJECT       *Op;
-    ACPI_WALK_STATE         *WalkState;
+    ACPI_STATUS Status;
+    ACPI_PARSE_OBJECT *Op;
+    ACPI_WALK_STATE *WalkState;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsExecuteArguments, AmlStart);
-
+    ACPI_FUNCTION_TRACE_PTR(DsExecuteArguments, AmlStart);
 
     /* Allocate a new parser op to be the root of the parsed tree */
 
-    Op = AcpiPsAllocOp (AML_INT_EVAL_SUBTREE_OP, AmlStart);
+    Op = AcpiPsAllocOp(AML_INT_EVAL_SUBTREE_OP, AmlStart);
     if (!Op)
     {
-        return_ACPI_STATUS (AE_NO_MEMORY);
+        return_ACPI_STATUS(AE_NO_MEMORY);
     }
 
     /* Save the Node for use in AcpiPsParseAml */
@@ -214,18 +211,18 @@ AcpiDsExecuteArguments (
 
     /* Create and initialize a new parser state */
 
-    WalkState = AcpiDsCreateWalkState (0, NULL, NULL, NULL);
+    WalkState = AcpiDsCreateWalkState(0, NULL, NULL, NULL);
     if (!WalkState)
     {
         Status = AE_NO_MEMORY;
         goto Cleanup;
     }
 
-    Status = AcpiDsInitAmlWalk (WalkState, Op, NULL, AmlStart,
-        AmlLength, NULL, ACPI_IMODE_LOAD_PASS1);
-    if (ACPI_FAILURE (Status))
+    Status = AcpiDsInitAmlWalk(WalkState, Op, NULL, AmlStart,
+                               AmlLength, NULL, ACPI_IMODE_LOAD_PASS1);
+    if (ACPI_FAILURE(Status))
     {
-        AcpiDsDeleteWalkState (WalkState);
+        AcpiDsDeleteWalkState(WalkState);
         goto Cleanup;
     }
 
@@ -236,8 +233,8 @@ AcpiDsExecuteArguments (
 
     /* Pass1: Parse the entire declaration */
 
-    Status = AcpiPsParseAml (WalkState);
-    if (ACPI_FAILURE (Status))
+    Status = AcpiPsParseAml(WalkState);
+    if (ACPI_FAILURE(Status))
     {
         goto Cleanup;
     }
@@ -245,21 +242,21 @@ AcpiDsExecuteArguments (
     /* Get and init the Op created above */
 
     Op->Common.Node = Node;
-    AcpiPsDeleteParseTree (Op);
+    AcpiPsDeleteParseTree(Op);
 
     /* Evaluate the deferred arguments */
 
-    Op = AcpiPsAllocOp (AML_INT_EVAL_SUBTREE_OP, AmlStart);
+    Op = AcpiPsAllocOp(AML_INT_EVAL_SUBTREE_OP, AmlStart);
     if (!Op)
     {
-        return_ACPI_STATUS (AE_NO_MEMORY);
+        return_ACPI_STATUS(AE_NO_MEMORY);
     }
 
     Op->Common.Node = ScopeNode;
 
     /* Create and initialize a new parser state */
 
-    WalkState = AcpiDsCreateWalkState (0, NULL, NULL, NULL);
+    WalkState = AcpiDsCreateWalkState(0, NULL, NULL, NULL);
     if (!WalkState)
     {
         Status = AE_NO_MEMORY;
@@ -268,24 +265,23 @@ AcpiDsExecuteArguments (
 
     /* Execute the opcode and arguments */
 
-    Status = AcpiDsInitAmlWalk (WalkState, Op, NULL, AmlStart,
-        AmlLength, NULL, ACPI_IMODE_EXECUTE);
-    if (ACPI_FAILURE (Status))
+    Status = AcpiDsInitAmlWalk(WalkState, Op, NULL, AmlStart,
+                               AmlLength, NULL, ACPI_IMODE_EXECUTE);
+    if (ACPI_FAILURE(Status))
     {
-        AcpiDsDeleteWalkState (WalkState);
+        AcpiDsDeleteWalkState(WalkState);
         goto Cleanup;
     }
 
     /* Mark this execution as a deferred opcode */
 
     WalkState->DeferredNode = Node;
-    Status = AcpiPsParseAml (WalkState);
+    Status = AcpiPsParseAml(WalkState);
 
 Cleanup:
-    AcpiPsDeleteParseTree (Op);
-    return_ACPI_STATUS (Status);
+    AcpiPsDeleteParseTree(Op);
+    return_ACPI_STATUS(Status);
 }
-
 
 /*******************************************************************************
  *
@@ -301,40 +297,37 @@ Cleanup:
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiDsGetBufferFieldArguments (
-    ACPI_OPERAND_OBJECT     *ObjDesc)
+AcpiDsGetBufferFieldArguments(
+    ACPI_OPERAND_OBJECT *ObjDesc)
 {
-    ACPI_OPERAND_OBJECT     *ExtraDesc;
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_STATUS             Status;
+    ACPI_OPERAND_OBJECT *ExtraDesc;
+    ACPI_NAMESPACE_NODE *Node;
+    ACPI_STATUS Status;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsGetBufferFieldArguments, ObjDesc);
-
+    ACPI_FUNCTION_TRACE_PTR(DsGetBufferFieldArguments, ObjDesc);
 
     if (ObjDesc->Common.Flags & AOPOBJ_DATA_VALID)
     {
-        return_ACPI_STATUS (AE_OK);
+        return_ACPI_STATUS(AE_OK);
     }
 
     /* Get the AML pointer (method object) and BufferField node */
 
-    ExtraDesc = AcpiNsGetSecondaryObject (ObjDesc);
+    ExtraDesc = AcpiNsGetSecondaryObject(ObjDesc);
     Node = ObjDesc->BufferField.Node;
 
-    ACPI_DEBUG_EXEC (AcpiUtDisplayInitPathname (
+    ACPI_DEBUG_EXEC(AcpiUtDisplayInitPathname(
         ACPI_TYPE_BUFFER_FIELD, Node, NULL));
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_EXEC, "[%4.4s] BufferField Arg Init\n",
-        AcpiUtGetNodeName (Node)));
+    ACPI_DEBUG_PRINT((ACPI_DB_EXEC, "[%4.4s] BufferField Arg Init\n",
+                      AcpiUtGetNodeName(Node)));
 
     /* Execute the AML code for the TermArg arguments */
 
-    Status = AcpiDsExecuteArguments (Node, Node->Parent,
-        ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
-    return_ACPI_STATUS (Status);
+    Status = AcpiDsExecuteArguments(Node, Node->Parent,
+                                    ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
+    return_ACPI_STATUS(Status);
 }
-
 
 /*******************************************************************************
  *
@@ -350,40 +343,37 @@ AcpiDsGetBufferFieldArguments (
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiDsGetBankFieldArguments (
-    ACPI_OPERAND_OBJECT     *ObjDesc)
+AcpiDsGetBankFieldArguments(
+    ACPI_OPERAND_OBJECT *ObjDesc)
 {
-    ACPI_OPERAND_OBJECT     *ExtraDesc;
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_STATUS             Status;
+    ACPI_OPERAND_OBJECT *ExtraDesc;
+    ACPI_NAMESPACE_NODE *Node;
+    ACPI_STATUS Status;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsGetBankFieldArguments, ObjDesc);
-
+    ACPI_FUNCTION_TRACE_PTR(DsGetBankFieldArguments, ObjDesc);
 
     if (ObjDesc->Common.Flags & AOPOBJ_DATA_VALID)
     {
-        return_ACPI_STATUS (AE_OK);
+        return_ACPI_STATUS(AE_OK);
     }
 
     /* Get the AML pointer (method object) and BankField node */
 
-    ExtraDesc = AcpiNsGetSecondaryObject (ObjDesc);
+    ExtraDesc = AcpiNsGetSecondaryObject(ObjDesc);
     Node = ObjDesc->BankField.Node;
 
-    ACPI_DEBUG_EXEC (AcpiUtDisplayInitPathname (
+    ACPI_DEBUG_EXEC(AcpiUtDisplayInitPathname(
         ACPI_TYPE_LOCAL_BANK_FIELD, Node, NULL));
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_EXEC, "[%4.4s] BankField Arg Init\n",
-        AcpiUtGetNodeName (Node)));
+    ACPI_DEBUG_PRINT((ACPI_DB_EXEC, "[%4.4s] BankField Arg Init\n",
+                      AcpiUtGetNodeName(Node)));
 
     /* Execute the AML code for the TermArg arguments */
 
-    Status = AcpiDsExecuteArguments (Node, Node->Parent,
-        ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
-    return_ACPI_STATUS (Status);
+    Status = AcpiDsExecuteArguments(Node, Node->Parent,
+                                    ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
+    return_ACPI_STATUS(Status);
 }
-
 
 /*******************************************************************************
  *
@@ -399,19 +389,17 @@ AcpiDsGetBankFieldArguments (
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiDsGetBufferArguments (
-    ACPI_OPERAND_OBJECT     *ObjDesc)
+AcpiDsGetBufferArguments(
+    ACPI_OPERAND_OBJECT *ObjDesc)
 {
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_STATUS             Status;
+    ACPI_NAMESPACE_NODE *Node;
+    ACPI_STATUS Status;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsGetBufferArguments, ObjDesc);
-
+    ACPI_FUNCTION_TRACE_PTR(DsGetBufferArguments, ObjDesc);
 
     if (ObjDesc->Common.Flags & AOPOBJ_DATA_VALID)
     {
-        return_ACPI_STATUS (AE_OK);
+        return_ACPI_STATUS(AE_OK);
     }
 
     /* Get the Buffer node */
@@ -419,21 +407,20 @@ AcpiDsGetBufferArguments (
     Node = ObjDesc->Buffer.Node;
     if (!Node)
     {
-        ACPI_ERROR ((AE_INFO,
-            "No pointer back to namespace node in buffer object %p",
-            ObjDesc));
-        return_ACPI_STATUS (AE_AML_INTERNAL);
+        ACPI_ERROR((AE_INFO,
+                    "No pointer back to namespace node in buffer object %p",
+                    ObjDesc));
+        return_ACPI_STATUS(AE_AML_INTERNAL);
     }
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_EXEC, "Buffer Arg Init\n"));
+    ACPI_DEBUG_PRINT((ACPI_DB_EXEC, "Buffer Arg Init\n"));
 
     /* Execute the AML code for the TermArg arguments */
 
-    Status = AcpiDsExecuteArguments (Node, Node,
-        ObjDesc->Buffer.AmlLength, ObjDesc->Buffer.AmlStart);
-    return_ACPI_STATUS (Status);
+    Status = AcpiDsExecuteArguments(Node, Node,
+                                    ObjDesc->Buffer.AmlLength, ObjDesc->Buffer.AmlStart);
+    return_ACPI_STATUS(Status);
 }
-
 
 /*******************************************************************************
  *
@@ -449,19 +436,17 @@ AcpiDsGetBufferArguments (
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiDsGetPackageArguments (
-    ACPI_OPERAND_OBJECT     *ObjDesc)
+AcpiDsGetPackageArguments(
+    ACPI_OPERAND_OBJECT *ObjDesc)
 {
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_STATUS             Status;
+    ACPI_NAMESPACE_NODE *Node;
+    ACPI_STATUS Status;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsGetPackageArguments, ObjDesc);
-
+    ACPI_FUNCTION_TRACE_PTR(DsGetPackageArguments, ObjDesc);
 
     if (ObjDesc->Common.Flags & AOPOBJ_DATA_VALID)
     {
-        return_ACPI_STATUS (AE_OK);
+        return_ACPI_STATUS(AE_OK);
     }
 
     /* Get the Package node */
@@ -469,22 +454,21 @@ AcpiDsGetPackageArguments (
     Node = ObjDesc->Package.Node;
     if (!Node)
     {
-        ACPI_ERROR ((AE_INFO,
-            "No pointer back to namespace node in package %p", ObjDesc));
-        return_ACPI_STATUS (AE_AML_INTERNAL);
+        ACPI_ERROR((AE_INFO,
+                    "No pointer back to namespace node in package %p", ObjDesc));
+        return_ACPI_STATUS(AE_AML_INTERNAL);
     }
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_EXEC, "Package Argument Init, AML Ptr: %p\n",
-        ObjDesc->Package.AmlStart));
+    ACPI_DEBUG_PRINT((ACPI_DB_EXEC, "Package Argument Init, AML Ptr: %p\n",
+                      ObjDesc->Package.AmlStart));
 
     /* Execute the AML code for the TermArg arguments */
 
-    Status = AcpiDsExecuteArguments (Node, Node,
-        ObjDesc->Package.AmlLength, ObjDesc->Package.AmlStart);
+    Status = AcpiDsExecuteArguments(Node, Node,
+                                    ObjDesc->Package.AmlLength, ObjDesc->Package.AmlStart);
 
-    return_ACPI_STATUS (Status);
+    return_ACPI_STATUS(Status);
 }
-
 
 /*******************************************************************************
  *
@@ -500,49 +484,47 @@ AcpiDsGetPackageArguments (
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiDsGetRegionArguments (
-    ACPI_OPERAND_OBJECT     *ObjDesc)
+AcpiDsGetRegionArguments(
+    ACPI_OPERAND_OBJECT *ObjDesc)
 {
-    ACPI_NAMESPACE_NODE     *Node;
-    ACPI_STATUS             Status;
-    ACPI_OPERAND_OBJECT     *ExtraDesc;
+    ACPI_NAMESPACE_NODE *Node;
+    ACPI_STATUS Status;
+    ACPI_OPERAND_OBJECT *ExtraDesc;
 
-
-    ACPI_FUNCTION_TRACE_PTR (DsGetRegionArguments, ObjDesc);
-
+    ACPI_FUNCTION_TRACE_PTR(DsGetRegionArguments, ObjDesc);
 
     if (ObjDesc->Region.Flags & AOPOBJ_DATA_VALID)
     {
-        return_ACPI_STATUS (AE_OK);
+        return_ACPI_STATUS(AE_OK);
     }
 
-    ExtraDesc = AcpiNsGetSecondaryObject (ObjDesc);
+    ExtraDesc = AcpiNsGetSecondaryObject(ObjDesc);
     if (!ExtraDesc)
     {
-        return_ACPI_STATUS (AE_NOT_EXIST);
+        return_ACPI_STATUS(AE_NOT_EXIST);
     }
 
     /* Get the Region node */
 
     Node = ObjDesc->Region.Node;
 
-    ACPI_DEBUG_EXEC (AcpiUtDisplayInitPathname (
+    ACPI_DEBUG_EXEC(AcpiUtDisplayInitPathname(
         ACPI_TYPE_REGION, Node, NULL));
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_EXEC,
-        "[%4.4s] OpRegion Arg Init at AML %p\n",
-        AcpiUtGetNodeName (Node), ExtraDesc->Extra.AmlStart));
+    ACPI_DEBUG_PRINT((ACPI_DB_EXEC,
+                      "[%4.4s] OpRegion Arg Init at AML %p\n",
+                      AcpiUtGetNodeName(Node), ExtraDesc->Extra.AmlStart));
 
     /* Execute the argument AML */
 
-    Status = AcpiDsExecuteArguments (Node, ExtraDesc->Extra.ScopeNode,
-        ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
-    if (ACPI_FAILURE (Status))
+    Status = AcpiDsExecuteArguments(Node, ExtraDesc->Extra.ScopeNode,
+                                    ExtraDesc->Extra.AmlLength, ExtraDesc->Extra.AmlStart);
+    if (ACPI_FAILURE(Status))
     {
-        return_ACPI_STATUS (Status);
+        return_ACPI_STATUS(Status);
     }
 
-    Status = AcpiUtAddAddressRange (ObjDesc->Region.SpaceId,
-        ObjDesc->Region.Address, ObjDesc->Region.Length, Node);
-    return_ACPI_STATUS (Status);
+    Status = AcpiUtAddAddressRange(ObjDesc->Region.SpaceId,
+                                   ObjDesc->Region.Address, ObjDesc->Region.Length, Node);
+    return_ACPI_STATUS(Status);
 }
