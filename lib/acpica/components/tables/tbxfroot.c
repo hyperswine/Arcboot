@@ -149,14 +149,12 @@
  *
  *****************************************************************************/
 
-#include "acpi.h"
 #include "accommon.h"
+#include "acpi.h"
 #include "actables.h"
 
-
-#define _COMPONENT          ACPI_TABLES
-        ACPI_MODULE_NAME    ("tbxfroot")
-
+#define _COMPONENT ACPI_TABLES
+ACPI_MODULE_NAME("tbxfroot")
 
 /*******************************************************************************
  *
@@ -171,29 +169,21 @@
  ******************************************************************************/
 
 UINT32
-AcpiTbGetRsdpLength (
-    ACPI_TABLE_RSDP         *Rsdp)
-{
+AcpiTbGetRsdpLength(ACPI_TABLE_RSDP *Rsdp) {
+  if (!ACPI_VALIDATE_RSDP_SIG(Rsdp->Signature)) {
+    /* BAD Signature */
 
-    if (!ACPI_VALIDATE_RSDP_SIG (Rsdp->Signature))
-    {
-        /* BAD Signature */
+    return (0);
+  }
 
-        return (0);
-    }
+  /* "Length" field is available if table version >= 2 */
 
-    /* "Length" field is available if table version >= 2 */
-
-    if (Rsdp->Revision >= 2)
-    {
-        return (Rsdp->Length);
-    }
-    else
-    {
-        return (ACPI_RSDP_CHECKSUM_LENGTH);
-    }
+  if (Rsdp->Revision >= 2) {
+    return (Rsdp->Length);
+  } else {
+    return (ACPI_RSDP_CHECKSUM_LENGTH);
+  }
 }
-
 
 /*******************************************************************************
  *
@@ -208,41 +198,34 @@ AcpiTbGetRsdpLength (
  ******************************************************************************/
 
 ACPI_STATUS
-AcpiTbValidateRsdp (
-    ACPI_TABLE_RSDP         *Rsdp)
-{
+AcpiTbValidateRsdp(ACPI_TABLE_RSDP *Rsdp) {
+  /*
+   * The signature and checksum must both be correct
+   *
+   * Note: Sometimes there exists more than one RSDP in memory; the valid
+   * RSDP has a valid checksum, all others have an invalid checksum.
+   */
+  if (!ACPI_VALIDATE_RSDP_SIG(Rsdp->Signature)) {
+    /* Nope, BAD Signature */
 
-    /*
-     * The signature and checksum must both be correct
-     *
-     * Note: Sometimes there exists more than one RSDP in memory; the valid
-     * RSDP has a valid checksum, all others have an invalid checksum.
-     */
-    if (!ACPI_VALIDATE_RSDP_SIG (Rsdp->Signature))
-    {
-        /* Nope, BAD Signature */
+    return (AE_BAD_SIGNATURE);
+  }
 
-        return (AE_BAD_SIGNATURE);
-    }
+  /* Check the standard checksum */
 
-    /* Check the standard checksum */
+  if (AcpiTbChecksum((UINT8 *)Rsdp, ACPI_RSDP_CHECKSUM_LENGTH) != 0) {
+    return (AE_BAD_CHECKSUM);
+  }
 
-    if (AcpiTbChecksum ((UINT8 *) Rsdp, ACPI_RSDP_CHECKSUM_LENGTH) != 0)
-    {
-        return (AE_BAD_CHECKSUM);
-    }
+  /* Check extended checksum if table version >= 2 */
 
-    /* Check extended checksum if table version >= 2 */
+  if ((Rsdp->Revision >= 2) &&
+      (AcpiTbChecksum((UINT8 *)Rsdp, ACPI_RSDP_XCHECKSUM_LENGTH) != 0)) {
+    return (AE_BAD_CHECKSUM);
+  }
 
-    if ((Rsdp->Revision >= 2) &&
-        (AcpiTbChecksum ((UINT8 *) Rsdp, ACPI_RSDP_XCHECKSUM_LENGTH) != 0))
-    {
-        return (AE_BAD_CHECKSUM);
-    }
-
-    return (AE_OK);
+  return (AE_OK);
 }
-
 
 /*******************************************************************************
  *
@@ -265,127 +248,105 @@ AcpiTbValidateRsdp (
  ******************************************************************************/
 
 ACPI_STATUS ACPI_INIT_FUNCTION
-AcpiFindRootPointer (
-    ACPI_PHYSICAL_ADDRESS   *TableAddress)
-{
-    UINT8                   *TablePtr;
-    UINT8                   *MemRover;
-    UINT32                  PhysicalAddress;
-    UINT32                  EbdaWindowSize;
+AcpiFindRootPointer(ACPI_PHYSICAL_ADDRESS *TableAddress) {
+  UINT8 *TablePtr;
+  UINT8 *MemRover;
+  UINT32 PhysicalAddress;
+  UINT32 EbdaWindowSize;
 
+  ACPI_FUNCTION_TRACE(AcpiFindRootPointer);
 
-    ACPI_FUNCTION_TRACE (AcpiFindRootPointer);
+  /* 1a) Get the location of the Extended BIOS Data Area (EBDA) */
 
+  TablePtr = AcpiOsMapMemory((ACPI_PHYSICAL_ADDRESS)ACPI_EBDA_PTR_LOCATION,
+                             ACPI_EBDA_PTR_LENGTH);
+  if (!TablePtr) {
+    ACPI_ERROR((AE_INFO, "Could not map memory at 0x%8.8X for length %u",
+                ACPI_EBDA_PTR_LOCATION, ACPI_EBDA_PTR_LENGTH));
 
-    /* 1a) Get the location of the Extended BIOS Data Area (EBDA) */
+    return_ACPI_STATUS(AE_NO_MEMORY);
+  }
 
-    TablePtr = AcpiOsMapMemory (
-        (ACPI_PHYSICAL_ADDRESS) ACPI_EBDA_PTR_LOCATION,
-        ACPI_EBDA_PTR_LENGTH);
-    if (!TablePtr)
-    {
-        ACPI_ERROR ((AE_INFO,
-            "Could not map memory at 0x%8.8X for length %u",
-            ACPI_EBDA_PTR_LOCATION, ACPI_EBDA_PTR_LENGTH));
+  ACPI_MOVE_16_TO_32(&PhysicalAddress, TablePtr);
 
-        return_ACPI_STATUS (AE_NO_MEMORY);
-    }
+  /* Convert segment part to physical address */
 
-    ACPI_MOVE_16_TO_32 (&PhysicalAddress, TablePtr);
+  PhysicalAddress <<= 4;
+  AcpiOsUnmapMemory(TablePtr, ACPI_EBDA_PTR_LENGTH);
 
-    /* Convert segment part to physical address */
+  /* EBDA present? */
 
-    PhysicalAddress <<= 4;
-    AcpiOsUnmapMemory (TablePtr, ACPI_EBDA_PTR_LENGTH);
-
-    /* EBDA present? */
+  /*
+   * Check that the EBDA pointer from memory is sane and does not point
+   * above valid low memory
+   */
+  if (PhysicalAddress > 0x400 && PhysicalAddress < 0xA0000) {
+    /*
+     * Calculate the scan window size
+     * The EBDA is not guaranteed to be larger than a KiB and in case
+     * that it is smaller, the scanning function would leave the low
+     * memory and continue to the VGA range.
+     */
+    EbdaWindowSize = ACPI_MIN(ACPI_EBDA_WINDOW_SIZE, 0xA0000 - PhysicalAddress);
 
     /*
-     * Check that the EBDA pointer from memory is sane and does not point
-     * above valid low memory
+     * 1b) Search EBDA paragraphs
      */
-    if (PhysicalAddress > 0x400 &&
-        PhysicalAddress < 0xA0000)
-    {
-        /*
-         * Calculate the scan window size
-         * The EBDA is not guaranteed to be larger than a KiB and in case
-         * that it is smaller, the scanning function would leave the low
-         * memory and continue to the VGA range.
-         */
-        EbdaWindowSize = ACPI_MIN(ACPI_EBDA_WINDOW_SIZE,
-            0xA0000 - PhysicalAddress);
+    TablePtr =
+        AcpiOsMapMemory((ACPI_PHYSICAL_ADDRESS)PhysicalAddress, EbdaWindowSize);
+    if (!TablePtr) {
+      ACPI_ERROR((AE_INFO, "Could not map memory at 0x%8.8X for length %u",
+                  PhysicalAddress, EbdaWindowSize));
 
-        /*
-         * 1b) Search EBDA paragraphs
-         */
-        TablePtr = AcpiOsMapMemory (
-            (ACPI_PHYSICAL_ADDRESS) PhysicalAddress,
-            EbdaWindowSize);
-        if (!TablePtr)
-        {
-            ACPI_ERROR ((AE_INFO,
-                "Could not map memory at 0x%8.8X for length %u",
-                PhysicalAddress, EbdaWindowSize));
-
-            return_ACPI_STATUS (AE_NO_MEMORY);
-        }
-
-        MemRover = AcpiTbScanMemoryForRsdp (
-            TablePtr, EbdaWindowSize);
-        AcpiOsUnmapMemory (TablePtr, EbdaWindowSize);
-
-        if (MemRover)
-        {
-            /* Return the physical address */
-
-            PhysicalAddress +=
-                (UINT32) ACPI_PTR_DIFF (MemRover, TablePtr);
-
-            *TableAddress = (ACPI_PHYSICAL_ADDRESS) PhysicalAddress;
-            return_ACPI_STATUS (AE_OK);
-        }
+      return_ACPI_STATUS(AE_NO_MEMORY);
     }
 
-    /*
-     * 2) Search upper memory: 16-byte boundaries in E0000h-FFFFFh
-     */
-    TablePtr = AcpiOsMapMemory (
-        (ACPI_PHYSICAL_ADDRESS) ACPI_HI_RSDP_WINDOW_BASE,
-        ACPI_HI_RSDP_WINDOW_SIZE);
+    MemRover = AcpiTbScanMemoryForRsdp(TablePtr, EbdaWindowSize);
+    AcpiOsUnmapMemory(TablePtr, EbdaWindowSize);
 
-    if (!TablePtr)
-    {
-        ACPI_ERROR ((AE_INFO,
-            "Could not map memory at 0x%8.8X for length %u",
-            ACPI_HI_RSDP_WINDOW_BASE, ACPI_HI_RSDP_WINDOW_SIZE));
+    if (MemRover) {
+      /* Return the physical address */
 
-        return_ACPI_STATUS (AE_NO_MEMORY);
+      PhysicalAddress += (UINT32)ACPI_PTR_DIFF(MemRover, TablePtr);
+
+      *TableAddress = (ACPI_PHYSICAL_ADDRESS)PhysicalAddress;
+      return_ACPI_STATUS(AE_OK);
     }
+  }
 
-    MemRover = AcpiTbScanMemoryForRsdp (
-        TablePtr, ACPI_HI_RSDP_WINDOW_SIZE);
-    AcpiOsUnmapMemory (TablePtr, ACPI_HI_RSDP_WINDOW_SIZE);
+  /*
+   * 2) Search upper memory: 16-byte boundaries in E0000h-FFFFFh
+   */
+  TablePtr = AcpiOsMapMemory((ACPI_PHYSICAL_ADDRESS)ACPI_HI_RSDP_WINDOW_BASE,
+                             ACPI_HI_RSDP_WINDOW_SIZE);
 
-    if (MemRover)
-    {
-        /* Return the physical address */
+  if (!TablePtr) {
+    ACPI_ERROR((AE_INFO, "Could not map memory at 0x%8.8X for length %u",
+                ACPI_HI_RSDP_WINDOW_BASE, ACPI_HI_RSDP_WINDOW_SIZE));
 
-        PhysicalAddress = (UINT32)
-            (ACPI_HI_RSDP_WINDOW_BASE + ACPI_PTR_DIFF (MemRover, TablePtr));
+    return_ACPI_STATUS(AE_NO_MEMORY);
+  }
 
-        *TableAddress = (ACPI_PHYSICAL_ADDRESS) PhysicalAddress;
-        return_ACPI_STATUS (AE_OK);
-    }
+  MemRover = AcpiTbScanMemoryForRsdp(TablePtr, ACPI_HI_RSDP_WINDOW_SIZE);
+  AcpiOsUnmapMemory(TablePtr, ACPI_HI_RSDP_WINDOW_SIZE);
 
-    /* A valid RSDP was not found */
+  if (MemRover) {
+    /* Return the physical address */
 
-    ACPI_BIOS_ERROR ((AE_INFO, "A valid RSDP was not found"));
-    return_ACPI_STATUS (AE_NOT_FOUND);
+    PhysicalAddress =
+        (UINT32)(ACPI_HI_RSDP_WINDOW_BASE + ACPI_PTR_DIFF(MemRover, TablePtr));
+
+    *TableAddress = (ACPI_PHYSICAL_ADDRESS)PhysicalAddress;
+    return_ACPI_STATUS(AE_OK);
+  }
+
+  /* A valid RSDP was not found */
+
+  ACPI_BIOS_ERROR((AE_INFO, "A valid RSDP was not found"));
+  return_ACPI_STATUS(AE_NOT_FOUND);
 }
 
-ACPI_EXPORT_SYMBOL_INIT (AcpiFindRootPointer)
-
+ACPI_EXPORT_SYMBOL_INIT(AcpiFindRootPointer)
 
 /*******************************************************************************
  *
@@ -400,46 +361,37 @@ ACPI_EXPORT_SYMBOL_INIT (AcpiFindRootPointer)
  *
  ******************************************************************************/
 
-UINT8 *
-AcpiTbScanMemoryForRsdp (
-    UINT8                   *StartAddress,
-    UINT32                  Length)
-{
-    ACPI_STATUS             Status;
-    UINT8                   *MemRover;
-    UINT8                   *EndAddress;
+UINT8 *AcpiTbScanMemoryForRsdp(UINT8 *StartAddress, UINT32 Length) {
+  ACPI_STATUS Status;
+  UINT8 *MemRover;
+  UINT8 *EndAddress;
 
+  ACPI_FUNCTION_TRACE(TbScanMemoryForRsdp);
 
-    ACPI_FUNCTION_TRACE (TbScanMemoryForRsdp);
+  EndAddress = StartAddress + Length;
 
+  /* Search from given start address for the requested length */
 
-    EndAddress = StartAddress + Length;
+  for (MemRover = StartAddress; MemRover < EndAddress;
+       MemRover += ACPI_RSDP_SCAN_STEP) {
+    /* The RSDP signature and checksum must both be correct */
 
-    /* Search from given start address for the requested length */
+    Status = AcpiTbValidateRsdp(ACPI_CAST_PTR(ACPI_TABLE_RSDP, MemRover));
+    if (ACPI_SUCCESS(Status)) {
+      /* Sig and checksum valid, we have found a real RSDP */
 
-    for (MemRover = StartAddress; MemRover < EndAddress;
-         MemRover += ACPI_RSDP_SCAN_STEP)
-    {
-        /* The RSDP signature and checksum must both be correct */
-
-        Status = AcpiTbValidateRsdp (
-            ACPI_CAST_PTR (ACPI_TABLE_RSDP, MemRover));
-        if (ACPI_SUCCESS (Status))
-        {
-            /* Sig and checksum valid, we have found a real RSDP */
-
-            ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
-                "RSDP located at physical address %p\n", MemRover));
-            return_PTR (MemRover);
-        }
-
-        /* No sig match or bad checksum, keep searching */
+      ACPI_DEBUG_PRINT(
+          (ACPI_DB_INFO, "RSDP located at physical address %p\n", MemRover));
+      return_PTR(MemRover);
     }
 
-    /* Searched entire block, no RSDP was found */
+    /* No sig match or bad checksum, keep searching */
+  }
 
-    ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
-        "Searched entire block from %p, valid RSDP was not found\n",
-        StartAddress));
-    return_PTR (NULL);
+  /* Searched entire block, no RSDP was found */
+
+  ACPI_DEBUG_PRINT((ACPI_DB_INFO,
+                    "Searched entire block from %p, valid RSDP was not found\n",
+                    StartAddress));
+  return_PTR(NULL);
 }
