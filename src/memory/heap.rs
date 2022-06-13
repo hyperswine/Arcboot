@@ -1,8 +1,5 @@
-// QUICK ALLOC FOR TESTS AND OTHER STUFF LIKE UEFI WHICH MAY BE GOOD WITH IT
-// IDK WHERE TO PUT HEAP, MAYBE AT 0x50000
-
-// should use https://docs.rs/context-allocator/latest/context_allocator/
-// to init_heap() and register this as the default allocator
+// Heap could be placed at 0x80000 or something for ID mapped pages
+// maybe we dont initialise the heap before setting up 4 level paging
 
 use linked_list_allocator::{self, LockedHeap};
 

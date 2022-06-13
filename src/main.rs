@@ -51,6 +51,13 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // ??? id expect it to be 0x80000. Maybe something with virtual memory/not id mapped?
     info!("address of s = {:p}", &s);
 
+    // try to read 8 bytes into a &str at 0x80000
+    let ptr: *const u8 = 0x80000 as *const u8;
+    unsafe {
+        print_serial_line!("{}", *ptr.offset(0) as char);
+        print_serial_line!("{}", *ptr.offset(1) as char);
+    }
+
     // can you somehow inspect the memory address directly?
     // prob. We have to know where its allocating as well
     // maybe Box or something. A pointer to Box
