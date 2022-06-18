@@ -178,18 +178,18 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         // try EB9D2D30-2D88-11D3-9A16-0090273FC14D first
         // try 8868E871-E4F1-11D3-BC22-0080C73C8881 next
 
-        let rdsp = cfg::ACPI2_GUID;
+        let rsdp = cfg::ACPI2_GUID;
 
-        // Find the value of RDSP
-        let res = config_table.iter().find(|c| c.guid == rdsp);
+        // Find the value of RSDP
+        let res = config_table.iter().find(|c| c.guid == rsdp);
 
-        let rdsp = match res {
+        let rsdp = match res {
             Some(r) => {
-                info!("Found RDSP entry, at addr = {:p}", r.address);
+                info!("Found RSDP entry, at addr = {:p}", r.address);
                 r.address
             }
             None => {
-                panic!("Couldn't find RDSP in the ACPI v2 table")
+                panic!("Couldn't find RSDP in the ACPI v2 table")
             }
         };
 
@@ -240,7 +240,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         };
 
         // acpi
-        // let res = unsafe { AcpiTables::from_rsdp(handler, rdsp as usize) };
+        // let res = unsafe { AcpiTables::from_rsdp(handler, rsdp as usize) };
         // match res {
         //     Ok(r) => {
         //         let p = r.platform_info().unwrap();
