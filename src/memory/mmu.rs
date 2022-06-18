@@ -56,7 +56,8 @@ impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
         assert!(AS_SIZE.is_power_of_two());
 
         // Check for architectural restrictions as well
-        Self::arch_address_space_size_sanity_checks();
+        // this should be a trait
+        // Self::arch_address_space_size_sanity_checks();
 
         AS_SIZE
     }

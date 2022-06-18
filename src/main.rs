@@ -14,12 +14,12 @@ extern crate alloc;
 use aarch64::regs::{
     CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SPSR_EL3,
     TCR_EL1::{self, EPD0::EnableTTBR0Walks},
-    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
+    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1, SP_EL1,
 };
 use alloc::string::String;
 use arcboot::{
-    aarch64::drivers::_print_serial, logger::init_runtime_logger, memory::heap::init_heap,
-    print_serial_line, write_uart, write_uart_line,
+    logger::init_runtime_logger, memory::heap::init_heap, print_serial_line, write_uart,
+    write_uart_line,
 };
 use core::{arch::asm, ptr::NonNull};
 use cortex_a::{asm, registers};
@@ -50,6 +50,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // 0x478071a8 is the address sometimes
     // ??? id expect it to be 0x80000. Maybe something with virtual memory/not id mapped?
     info!("address of s = {:p}", &s);
+
+    // print the stack addr of bootime
+    // 0xbf807fd0. Prob grows up towards 0x0, ID mapped. IDK but the interrupt vector table is at 0x0
+    // at 3.2GB
+    let sp = SP_EL1.get();
+    info!("stack pointer = {sp}");
 
     // try to read 8 bytes into a &str at 0x80000
     let ptr: *const u8 = 0x80000 as *const u8;
@@ -135,6 +141,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mem = TTBR1_EL1.get();
     print_serial_line!("TTBR1 EL1 = {mem:#b}\n");
 
+    // print the stack addr of runtime
+    let sp = SP_EL1.get();
+    info!("stack pointer = {sp}");
+
     // let mem = TCR_EL1::EPD1::Value;
     // print_serial_line!("TCR EL1 = {mem:#b}\n"));
 
@@ -157,8 +167,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let s = String::from("Hello");
 
     print_serial_line!("s = {s}!");
-
-    print_serial_line!("Heap initialised!");
 
     // setup new virtual table
     // st.set_virtual_address_map(map, new_system_table_virtual_addr);

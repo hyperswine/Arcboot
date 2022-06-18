@@ -2,11 +2,13 @@
 // USE
 // --------------
 
-use crate::{aarch64::drivers::Uart, print_serial_line};
 use core::fmt::Write;
 use core::{fmt, ptr::NonNull};
 use lazy_static::lazy_static;
-use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, Log};
+use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
+
+use crate::aarch64::drivers::uart::Uart;
+use crate::print_serial_line;
 
 // --------------
 // RUNTIME LOGGER
@@ -22,7 +24,7 @@ impl Log for RuntimeLogger {
         Uart::new().is_some()
     }
 
-    /// Cannot log if anotherr task is using the same output stream
+    /// Cannot log if another task is using the same output stream
     /// Could prob spinlock on it
     fn log(&self, record: &Record) {
         // spinlock
