@@ -19,8 +19,17 @@ pub fn init_heap() {
 
 // 524K - 590K
 // no exception so should work. Just that the values are off
-pub const HEAP_START: usize = 0x80000;
-pub const HEAP_SIZE: usize = 16 * 0x1000;
+// should grow up to MAX val
+// maybe init the heap after bootservices?
+
+// 0x1000-0x5000
+// pub const HEAP_START: usize = 0x1000;
+// pub const HEAP_SIZE: usize = 4 * 0x1000;
+
+// if at 0xbf808110, maybe define it + 0x1000 from that, growing up
+// so that must be a hole then 0xc0000_0000
+pub const HEAP_START: usize = 0xa000_0000;
+pub const HEAP_SIZE: usize = 4 * 0x1000;
 
 // getting an exception here. So the above should work?
 // pub const HEAP_START: usize = 0x_4444_4444_0000;

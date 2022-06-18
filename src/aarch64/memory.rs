@@ -224,3 +224,18 @@ impl MMU for MemoryManagementUnit {
         SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
     }
 }
+
+/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB
+/// aligned, so the lvl3 is put first.
+#[repr(C)]
+#[repr(align(65536))]
+pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
+    /// Page descriptors, covering 64 KiB windows per entry.
+    lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
+
+    /// Table descriptors, covering 512 MiB windows.
+    lvl2: [TableDescriptor; NUM_TABLES],
+}
+
+/// A translation table type for the kernel space.
+pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;

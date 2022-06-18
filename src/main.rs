@@ -12,9 +12,9 @@
 extern crate alloc;
 
 use aarch64::regs::{
-    CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SPSR_EL3,
+    CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SP, SPSR_EL3, SP_EL1,
     TCR_EL1::{self, EPD0::EnableTTBR0Walks},
-    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1, SP_EL1,
+    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
 };
 use alloc::string::String;
 use arcboot::{
@@ -34,6 +34,9 @@ use uefi::{
     },
 };
 
+// maximum 40 entries
+pub const MAX_MEMORY_MAP_SIZE: usize = 40;
+
 // For RISC-V, use U-Boot
 #[entry]
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
@@ -43,26 +46,32 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     assert!(init_runtime_logger().is_ok());
     // ? Maybe endianess? But UEFI should be little endian I think
-    init_heap();
 
-    let s = String::from("Hi");
-    info!("s = {s}");
+    // Reset the console before running all the other tests
+    system_table
+        .stdout()
+        .reset(false)
+        .expect("Failed to reset stdout");
+
+    // let s = String::from("Hi");
+    // info!("s = {s}");
     // 0x478071a8 is the address sometimes
-    // ??? id expect it to be 0x80000. Maybe something with virtual memory/not id mapped?
-    info!("address of s = {:p}", &s);
+    // info!("address of s = {:p}", &s);
 
     // print the stack addr of bootime
     // 0xbf807fd0. Prob grows up towards 0x0, ID mapped. IDK but the interrupt vector table is at 0x0
     // at 3.2GB
-    let sp = SP_EL1.get();
-    info!("stack pointer = {sp}");
+
+    let curr_el = CurrentEL.get();
+    info!("current el = {curr_el}");
 
     // try to read 8 bytes into a &str at 0x80000
-    let ptr: *const u8 = 0x80000 as *const u8;
-    unsafe {
-        print_serial_line!("{}", *ptr.offset(0) as char);
-        print_serial_line!("{}", *ptr.offset(1) as char);
-    }
+    // ERROR!
+    // let ptr: *const u8 = 0x80000 as *const u8;
+    // unsafe {
+    //     print_serial_line!("{}", *ptr.offset(0) as char);
+    //     print_serial_line!("{}", *ptr.offset(1) as char);
+    // }
 
     // can you somehow inspect the memory address directly?
     // prob. We have to know where its allocating as well
@@ -73,12 +82,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     info!("Entry into arcboot!");
 
-    // Reset the console before running all the other tests
-    system_table
-        .stdout()
-        .reset(false)
-        .expect("Failed to reset stdout");
-
     // Ensure the tests are run on a version of UEFI we support
     arcboot::efi::check_revision(system_table.uefi_revision());
 
@@ -87,9 +90,28 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let bt = system_table.boot_services();
 
+    init_heap();
+
+    let s = String::from("Hi");
+    info!("s = {s}");
+    // 0xbf808110
+    info!("address of s = {:p}", &s);
+
+    // getting an exception here for some reason
+    // let sp = SP_EL1.get();
+    // info!("stack pointer EL1 = {sp}");
+    // 0xBF807D70
+    let sp = SP.get();
+    info!("stack pointer EL1 = {sp:#04X}");
+
     // Try retrieving a handle to the file system the image was booted from
     bt.get_image_file_system(image)
         .expect("Failed to retrieve boot file system");
+
+    // get the memory map
+    let _size = bt.memory_map_size().map_size;
+    info!("Memory map size (bytes)= {_size}");
+    let memory_map = [0 as u8; MAX_MEMORY_MAP_SIZE];
 
     // TESTS TO ENSURE A WORKING SYSTEM
 
@@ -141,9 +163,13 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mem = TTBR1_EL1.get();
     print_serial_line!("TTBR1 EL1 = {mem:#b}\n");
 
+    let sp = SP.get();
+    info!("stack pointer EL1 = {sp:#04X}");
+
     // print the stack addr of runtime
-    let sp = SP_EL1.get();
-    info!("stack pointer = {sp}");
+    // exception... I guess we're just meant to read SP, and set SP_EL0 or a lower exception level
+    // let sp = SP_EL1.get();
+    // info!("stack pointer = {sp}");
 
     // let mem = TCR_EL1::EPD1::Value;
     // print_serial_line!("TCR EL1 = {mem:#b}\n"));
