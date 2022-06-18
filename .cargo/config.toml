@@ -1,7 +1,4 @@
 [unstable]
-# Doesnt work for test
-# build-std = ["core", "compiler_builtins", "alloc"]
-# build-std-features = ["compiler-builtins-mem"]
 unstable-options = true
 
 [alias]

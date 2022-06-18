@@ -51,7 +51,7 @@ fn make_graphics_program() -> GraphicsProgram {
     GraphicsProgram {}
 }
 
-#[test_case]
+#[test]
 fn test_graphics_driver() {
     // create graphics driver manager
     let graphics_driver = GraphicsDriver {};

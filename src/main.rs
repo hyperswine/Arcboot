@@ -1,8 +1,5 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![no_main]
-#![feature(custom_test_frameworks)]
-#![reexport_test_harness_main = "test_main"]
-#![test_runner(arcboot::test_runner)]
 #![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
 
 // --------------
@@ -201,10 +198,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         }
 
         struct Holder {
-            regions: Vec<(usize, usize)>
+            regions: Vec<(usize, usize)>,
         }
 
-        let holder = Holder {regions: Vec::new()};
+        let holder = Holder {
+            regions: Vec::new(),
+        };
 
         impl AcpiHandler for Handler {
             // gotta keep a list of mapped regions
@@ -312,17 +311,9 @@ pub fn load_arcboot_kernel() {}
 // PANIC
 // ----------------
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     print_serial_line!("Panicked at {info}");
     loop {}
-}
-
-// --------------
-// TEST
-// --------------
-
-#[test_case]
-fn test_basics() {
-    assert_eq!(1, 1);
 }

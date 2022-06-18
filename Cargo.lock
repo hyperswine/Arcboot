@@ -37,7 +37,6 @@ version = "0.1.1"
 dependencies = [
  "aarch64",
  "acpi",
- "arcboot_api",
  "cortex-a",
  "embedded-hal",
  "goblin",
@@ -61,6 +60,14 @@ dependencies = [
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.95",
+]
+
+[[package]]
+name = "arcboot_main"
+version = "0.1.1"
+dependencies = [
+ "arcboot",
+ "arcboot_api",
 ]
 
 [[package]]
