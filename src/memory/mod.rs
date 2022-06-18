@@ -3,5 +3,4 @@
 // #[cfg(not(feature = "uefi_support"))]
 pub mod heap;
 
-// PAGING SETUP
-pub mod paging;
+pub mod mmu;

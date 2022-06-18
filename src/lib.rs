@@ -8,6 +8,8 @@
 #![feature(alloc_error_handler)]
 // REQUIRED TO DEFINE CONSTANTS IN ASM
 #![feature(asm_const)]
+// For unlikely compiler hint
+#![feature(core_intrinsics)]
 
 // ---------------
 // CRATE WIDE USE
