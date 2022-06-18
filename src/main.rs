@@ -16,6 +16,7 @@ use aarch64::regs::{
     TCR_EL1::{self, EPD0::EnableTTBR0Walks},
     TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
 };
+use acpi::{AcpiHandler, AcpiTables, PhysicalMapping};
 use alloc::{
     string::String,
     vec::{self, Vec},
@@ -24,7 +25,7 @@ use arcboot::{
     logger::init_runtime_logger, memory::heap::init_heap, print_serial_line, write_uart,
     write_uart_line,
 };
-use core::{arch::asm, ptr::NonNull};
+use core::{arch::asm, borrow::Borrow, ptr::NonNull};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -33,9 +34,11 @@ use uefi::{
     proto::console::{serial::Serial, text::Output},
     table::{
         boot::{OpenProtocolAttributes, OpenProtocolParams},
+        cfg::{self, ConfigTableEntry},
         runtime::VariableVendor,
         Runtime,
-    }, Guid,
+    },
+    Guid,
 };
 
 // maximum bytes (1248)
@@ -152,59 +155,93 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // then we can use ACPI::from_rdsp
     let rt = unsafe { st.runtime_services() };
 
-    fn quick(rt: &RuntimeServices) {
-        let name = cstr16!("RSD PTR ");
-        // maybe heap too small? nah it cant tell
-        // __chkstk is a w32 function
-        // maybe its not fully supported or something... I have no idea
-        let mut vec_rdsp = alloc::vec![0; 16].into_boxed_slice();
-        // something wrong with this... I have no idea
-        // let mut vec_rdsp: Vec<u8> = Vec::new();
-        let res = rt.get_variable(name, &VariableVendor::GLOBAL_VARIABLE, &mut vec_rdsp);
-        info!("res = {}", res.is_ok());
+    let config_table = st.config_table();
 
-        match res {
-            Ok(r) => todo!(),
-            // not found for RDSP, err
-            Err(err) => info!("err = {err:?}"),
-        }
-
-        let v1 = cstr16!("EB9D2D30-2D88-11D3-9A16-0090273FC14D");
-        let res = rt.get_variable(v1, &VariableVendor::GLOBAL_VARIABLE, &mut vec_rdsp);
-        info!("v1 = {}", res.is_ok());
-
-        match res {
-            Ok(r) => todo!(),
-            Err(err) => info!("err = {err:?}"),
-        }
-
-        let v2 = cstr16!("8868E871-E4F1-11D3-BC22-0080C73C8881");
-        let res = rt.get_variable(v2, &VariableVendor::GLOBAL_VARIABLE, &mut vec_rdsp);
-        info!("v2 = {}", res.is_ok());
-
-        match res {
-            Ok(r) => todo!(),
-            Err(err) => info!("err = {err:?}"),
-        }
-
-        // maybe try vendor
-
-        let v2 = cstr16!("8868E871-E4F1-11D3-BC22-0080C73C8881");
-        let v2 = Guid::from_values(0x8868E871, 0xE4F1, 0x11D3, 0xBC22, 0x0080C73C8881);
-        let var_vendor = VariableVendor(v2);
-        let res = rt.get_variable(name, &var_vendor, &mut vec_rdsp);
-        info!("v2 = {}", res.is_ok());
-
-        match res {
-            Ok(r) => todo!(),
-            Err(err) => info!("err = {err:?}"),
-        }
+    fn quick(rt: &RuntimeServices, config_table: &[ConfigTableEntry]) {
+        let res = rt.variable_keys().unwrap();
+        // info!("res = {res:?}");
 
         // try EB9D2D30-2D88-11D3-9A16-0090273FC14D first
         // try 8868E871-E4F1-11D3-BC22-0080C73C8881 next
+
+        // get it from uefi::table::cfg::ACPI2_GUID
+        let rdsp = cfg::ACPI2_GUID;
+        // search the config table
+
+        // find it
+        let res = config_table.iter().find(|c| c.guid == rdsp);
+
+        let rdsp = match res {
+            Some(r) => {
+                info!("Found RDSP entry, at addr = {:p}", r.address);
+                r.address
+            }
+            None => {
+                panic!("Couldn't find RDSP in the ACPI v2 table")
+            }
+        };
+
+        // Identity mapped
+        #[derive(Debug, Clone)]
+        struct Handler {
+            // base addr, size
+            regions: (usize, usize),
+        }
+
+        impl AcpiHandler for Handler {
+            // gotta keep a list of mapped regions
+            unsafe fn map_physical_region<T>(
+                &self,
+                physical_address: usize,
+                size: usize,
+            ) -> PhysicalMapping<Self, T> {
+                info!("Mapping a region!");
+                let va = NonNull::new(physical_address as *mut T).unwrap();
+                PhysicalMapping::new(
+                    physical_address,
+                    va,
+                    size,
+                    size,
+                    Self {
+                        regions: (physical_address, size),
+                    },
+                )
+            }
+
+            fn unmap_physical_region<T>(region: &PhysicalMapping<Self, T>) {
+                info!("Unmapping a region!");
+                let handler = region.handler();
+                // prob not how they want you to do it then, since passes const ref
+                // handler.regions = (0, 0);
+            }
+        }
+
+        let handler = Handler {
+            regions: (0xc0000_0000, 0x100000),
+        };
+
+        // acpi
+        let res = unsafe { AcpiTables::from_rsdp(handler, rdsp as usize) };
+        match res {
+            Ok(r) => {
+                let p = r.platform_info().unwrap();
+                info!("Power profile = {:?}", p.power_profile);
+                info!("Interrupt model = {:?}", p.interrupt_model);
+                info!(
+                    "Boot Processor Info = {:?}",
+                    &p.processor_info.as_ref().unwrap().boot_processor
+                );
+                info!(
+                    "Application Processor Info = {:?}",
+                    &p.processor_info.unwrap().application_processors
+                );
+                info!("PM Timer = {:?}", p.pm_timer.unwrap().base);
+            }
+            Err(err) => panic!("couldn't get ACPI tables"),
+        }
     }
 
-    quick(rt);
+    quick(rt, config_table);
 
     let curr_el = CurrentEL.get();
     assert_eq!(curr_el, 0x4);
