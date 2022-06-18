@@ -196,54 +196,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
             }
         };
 
-        // Identity mapped
-        #[derive(Debug, Clone)]
-        struct Handler {
-            // base addr, sizek
-            regions: (usize, usize),
-        }
-
-        struct Holder {
-            regions: Vec<(usize, usize)>,
-        }
-
-        let holder = Holder {
-            regions: Vec::new(),
-        };
-
-        impl AcpiHandler for Handler {
-            // gotta keep a list of mapped regions
-            unsafe fn map_physical_region<T>(
-                &self,
-                physical_address: usize,
-                size: usize,
-            ) -> PhysicalMapping<Self, T> {
-                info!("Mapping a region!");
-                let va = NonNull::new(physical_address as *mut T).unwrap();
-                PhysicalMapping::new(
-                    physical_address,
-                    va,
-                    size,
-                    size,
-                    Self {
-                        regions: (physical_address, size),
-                    },
-                )
-            }
-
-            // have to call a global variable or something
-            fn unmap_physical_region<T>(region: &PhysicalMapping<Self, T>) {
-                info!("Unmapping a region!");
-                let handler = region.handler();
-                // prob not how they want you to do it then, since passes const ref
-                // handler.regions = (0, 0);
-            }
-        }
-
-        let handler = Handler {
-            regions: (0xc0000_0000, 0x100000),
-        };
-
         // acpi
         // let res = unsafe { AcpiTables::from_rsdp(handler, rsdp as usize) };
         // match res {

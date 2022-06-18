@@ -25,6 +25,7 @@ pub use aarch64;
 pub use cortex_a;
 pub use acpi;
 pub use tock_registers;
+// would use x86_64 as x86_64_arch
 
 // ---------------
 // API EXPORT

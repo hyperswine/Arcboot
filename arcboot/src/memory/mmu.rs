@@ -76,7 +76,7 @@ pub enum MemAttributes {
     Device,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum AccessPermissions {
     ReadOnly,
     ReadWrite,

@@ -1,10 +1,8 @@
+use core::ptr::NonNull;
 use acpi::{AcpiHandler, PhysicalMapping};
 
-// could prob impl acpihandler for paging
-// ? I dunno how this is meant to work
-
 #[derive(Debug, Clone, Copy)]
-pub struct AcpiHandle {}
+pub struct AcpiHandle;
 
 impl AcpiHandler for AcpiHandle {
     // create a physical mapping object
@@ -13,17 +11,13 @@ impl AcpiHandler for AcpiHandle {
         physical_address: usize,
         size: usize,
     ) -> acpi::PhysicalMapping<Self, T> {
-        // PhysicalMapping::new(
-        //     physical_start,
-        //     virtual_start,
-        //     region_length,
-        //     mapped_length,
-        //     *self,
-        // )
-        todo!()
+        info!("Mapping a region!");
+        let va = NonNull::new(physical_address as *mut T).unwrap();
+        PhysicalMapping::new(physical_address, va, size, size, Self)
     }
 
     fn unmap_physical_region<T>(region: &acpi::PhysicalMapping<Self, T>) {
-        todo!()
+        info!("Unmapping a region!");
+        let handler = region.handler();
     }
 }
