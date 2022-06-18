@@ -28,7 +28,7 @@ impl Log for RuntimeLogger {
     /// Could prob spinlock on it
     fn log(&self, record: &Record) {
         // spinlock
-        // while !self.enabled(record.metadata()) {}
+        while !self.enabled(record.metadata()) {}
 
         if self.enabled(record.metadata()) {
             print_serial_line!("{} - {}", record.level(), record.args());

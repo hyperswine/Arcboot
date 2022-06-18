@@ -1,6 +1,4 @@
-// Heap could be placed at 0x80000 or something for ID mapped pages
-// maybe we dont initialise the heap before setting up 4 level paging
-
+// Default heap allocator for testing
 use linked_list_allocator::{self, LockedHeap};
 
 #[global_allocator]
@@ -17,20 +15,20 @@ pub fn init_heap() {
     }
 }
 
-// 524K - 590K
-// no exception so should work. Just that the values are off
-// should grow up to MAX val
-// maybe init the heap after bootservices?
+// Reset the heap, e.g. to reinit it in another region
+pub fn zero_heap(heap_start: usize, heap_size: usize) {
+    for x in heap_start..(heap_start + heap_size) {
+        unsafe {
+            core::ptr::write_volatile(x as *mut u8, 0x0);
+        }
+    }
+}
 
-// 0x1000-0x5000
-// pub const HEAP_START: usize = 0x1000;
-// pub const HEAP_SIZE: usize = 4 * 0x1000;
-
-// if at 0xbf808110, maybe define it + 0x1000 from that, growing up
-// so that must be a hole then 0xc0000_0000
+// Temporary for Identity Mapping
 pub const HEAP_START: usize = 0xa000_0000;
 pub const HEAP_SIZE: usize = 4 * 0x1000;
 
-// getting an exception here. So the above should work?
+// Can "reinit" the heap after 4 level page tables is setup with these virtual address ranges
+// For the kernel only. Userspace apps must also use virtual memory (lower half) instead
 // pub const HEAP_START: usize = 0x_4444_4444_0000;
 // pub const HEAP_SIZE: usize = 100 * 1024;
