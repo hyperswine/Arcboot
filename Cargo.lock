@@ -68,6 +68,9 @@ version = "0.1.1"
 dependencies = [
  "arcboot",
  "arcboot_api",
+ "log",
+ "uefi",
+ "uefi-macros",
 ]
 
 [[package]]

@@ -82,7 +82,7 @@ pub fn _print_serial(args: fmt::Arguments) {
 
 #[macro_export]
 macro_rules! print_serial {
-    ($($arg:tt)*) => ($crate::aarch64::drivers::uart::_print_serial(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::arm64::drivers::uart::_print_serial(format_args!($($arg)*)));
 }
 
 /// Use this in most cases, or a logger

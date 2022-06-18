@@ -11,6 +11,10 @@ members = ["export", "arcboot"]
 [dependencies]
 arcboot = { path = "arcboot" }
 arcboot_api = { path = "export", optional = true }
+log = { version = "0.4.11", default-features = false }
+# some problems with reexporting
+uefi = { version = "0.16.0", features = ["exts"] }
+uefi-macros = { version = "0.7.0" }
 
 [features]
 api = ["arcboot_api"]

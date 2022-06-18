@@ -7,7 +7,7 @@ use core::{fmt, ptr::NonNull};
 use lazy_static::lazy_static;
 use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
 
-use crate::aarch64::drivers::uart::Uart;
+use crate::arm64::drivers::uart::Uart;
 use crate::print_serial_line;
 
 // --------------

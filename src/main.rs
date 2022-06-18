@@ -6,6 +6,8 @@
 // UEFI WRAPPERS
 // --------------
 
+#[macro_use]
+extern crate log;
 extern crate alloc;
 
 use aarch64::regs::{
@@ -22,6 +24,9 @@ use arcboot::{
     logger::init_runtime_logger, memory::heap::init_heap, print_serial_line, write_uart,
     write_uart_line,
 };
+
+use arcboot::*;
+
 use core::{arch::asm, borrow::Borrow, ptr::NonNull};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
@@ -37,6 +42,7 @@ use uefi::{
     },
     Guid,
 };
+use uefi_macros::entry;
 
 // maximum bytes (1248)
 pub const MAX_MEMORY_MAP_SIZE: usize = 1248;
@@ -147,7 +153,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     // IF HYPERVISOR feature is on, trap into EL2 instead since we are at EL1 for riscv, trap to H-Mode
     #[cfg(feature = "archypervisor")]
-    arcboot::aarch64::trap_to_el2();
+    arcboot::arm64::trap_to_el2();
 
     // Exit boot services as a proof that it works :)
     let sizes = system_table.boot_services().memory_map_size();
