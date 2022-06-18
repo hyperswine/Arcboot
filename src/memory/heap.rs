@@ -24,8 +24,8 @@ pub fn zero_heap(heap_start: usize, heap_size: usize) {
     }
 }
 
-// Temporary for Identity Mapping
-pub const HEAP_START: usize = 0xa000_0000;
+// Temporary for Identity Mapping. 0xA000_0000 works too
+pub const HEAP_START: usize = 0x4000_0000;
 pub const HEAP_SIZE: usize = 4 * 0x1000;
 
 // Can "reinit" the heap after 4 level page tables is setup with these virtual address ranges

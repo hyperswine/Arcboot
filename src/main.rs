@@ -64,32 +64,32 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         .reset(false)
         .expect("Failed to reset stdout");
 
-    let curr_el = CurrentEL.get();
-    info!("current el = {curr_el}");
-
-    // try to read 2 bytes at 0xa0000000
-    // should print out null if page is zeroed, or just junk
-    info!("Printing Junk...");
-    let ptr: *const u8 = 0xa0000000 as *const u8;
-    unsafe {
-        print_serial_line!("0xa0000000 = {}", *ptr.offset(0) as char);
-        print_serial_line!("0xa0000000 = {}", *ptr.offset(1) as char);
-    }
-
     info!("Entry into arcboot!");
+
+    let curr_el = CurrentEL.get();
+    info!("Current EL = {curr_el}");
+
+    // Read 2 bytes at a the beginning of the Heap area. Should print out null if page is zeroed, or just junk
+    info!("[TEST] Printing Junk...");
+    let ptr: *const u8 = 0x4000_0000 as *const u8;
+    unsafe {
+        print_serial_line!("0x4000_0000 = {}", *ptr.offset(0) as char);
+        print_serial_line!("0x4000_0001 = {}", *ptr.offset(1) as char);
+    }
+    info!("Hopefully you saw 2 diamond question marks");
 
     // Ensure the tests are run on a version of UEFI we support
     arcboot::efi::check_revision(system_table.uefi_revision());
 
     let bt = system_table.boot_services();
 
-    // Initialise heap area at 0xa000_0000
+    // Initialise heap area at 0x4000_0000
     init_heap();
 
-    let s = String::from("Hi");
-    info!("s = {s}");
+    let s = String::from("This is an Allocated String");
+    info!("Printing Allocated String: {s}");
     // 0xbf808110
-    info!("address of s = {:p}", &s);
+    info!("address of allocated string = {:p}", &s);
 
     // 0xBF807D70
     let sp = SP.get();
@@ -103,13 +103,36 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let _size = bt.memory_map_size().map_size;
     info!("Memory map size (bytes)= {_size}");
     // buffer too big it seems.. I have no idea why
-    // let mut memory_map = AlignToMemoryDescriptor{0: [0 as u8; MAX_MEMORY_MAP_SIZE]};
-    // let res = bt.memory_map(&mut memory_map.0);
-    // false, maybe buffer too small?
-    // info!("Retrieve Memory Map = {}", res.is_ok());
 
-    // this line causes problems. undefined symbol "__chkstk"
-    // info!("Memory Map Keys = {:?}", res.unwrap().0);
+    fn get_mem_map(bt: &BootServices) {
+        let mut memory_map = AlignToMemoryDescriptor {
+            0: [0 as u8; MAX_MEMORY_MAP_SIZE],
+        };
+        let res = bt.memory_map(&mut memory_map.0);
+
+        match res {
+            Ok(r) => {
+                info!("Retrieved Memory Map!");
+                // identifies this memory map
+                info!("Memory Map Key = {:?}", &r.0);
+                // second...
+                let iterator_item = r.1;
+                iterator_item.for_each(|i| info!("Memory Descriptor = {i:?}"));
+            }
+            Err(err) => panic!("Could not get memory map. Error: {err:?}"),
+        }
+
+        // for aarch64, generally
+        // 0x0 - 0x400_0000 is MMIO
+        // BFFF_C000 - 0xBFFFD000 is MMIO
+        // 0x4000_0000 + 492632 * 4K is conventional
+        // no MMIO anymore?? maybe cause of different heap
+
+        // 1GB-3GB ('phys') is DRAM
+        // maybe it means vaddr with a 1GB offset
+    }
+
+    get_mem_map(bt);
 
     // TESTS TO ENSURE A WORKING SYSTEM
 
@@ -125,8 +148,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     info!("Initialising boot protocol");
 
-    // IF HYPERVISOR feature is on, trap into EL2 instead since we are at EL1
-    // for riscv, trap to H-Mode
+    // IF HYPERVISOR feature is on, trap into EL2 instead since we are at EL1 for riscv, trap to H-Mode
     #[cfg(feature = "archypervisor")]
     arcboot::aarch64::trap_to_el2();
 
@@ -136,8 +158,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mut mmap_storage = alloc::vec![0; max_mmap_size].into_boxed_slice();
 
     info!("max_mmap_size: {}", max_mmap_size);
-    // should be all zeros
-    // info!("mmap_storage (before): {:?}", &mmap_storage);
 
     let (st, _iter) = system_table
         .exit_boot_services(image, &mut mmap_storage[..])
@@ -149,26 +169,18 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     print_serial_line!("Hello from runtime!");
 
-    // info!("mmap_storage (after): {:?}", &mmap_storage);
-    // we need to get RDSP from the vector table at 0x0 with some offset I think
-    // no its in the EFI_SYSTEM_TABLE, prob at runtime is fine. Its 16B
-    // then we can use ACPI::from_rdsp
     let rt = unsafe { st.runtime_services() };
 
     let config_table = st.config_table();
 
     fn quick(rt: &RuntimeServices, config_table: &[ConfigTableEntry]) {
         let res = rt.variable_keys().unwrap();
-        // info!("res = {res:?}");
-
         // try EB9D2D30-2D88-11D3-9A16-0090273FC14D first
         // try 8868E871-E4F1-11D3-BC22-0080C73C8881 next
 
-        // get it from uefi::table::cfg::ACPI2_GUID
         let rdsp = cfg::ACPI2_GUID;
-        // search the config table
 
-        // find it
+        // Find the value of RDSP
         let res = config_table.iter().find(|c| c.guid == rdsp);
 
         let rdsp = match res {
@@ -184,9 +196,15 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         // Identity mapped
         #[derive(Debug, Clone)]
         struct Handler {
-            // base addr, size
+            // base addr, sizek
             regions: (usize, usize),
         }
+
+        struct Holder {
+            regions: Vec<(usize, usize)>
+        }
+
+        let holder = Holder {regions: Vec::new()};
 
         impl AcpiHandler for Handler {
             // gotta keep a list of mapped regions
@@ -208,6 +226,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
                 )
             }
 
+            // have to call a global variable or something
             fn unmap_physical_region<T>(region: &PhysicalMapping<Self, T>) {
                 info!("Unmapping a region!");
                 let handler = region.handler();
@@ -221,24 +240,24 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         };
 
         // acpi
-        let res = unsafe { AcpiTables::from_rsdp(handler, rdsp as usize) };
-        match res {
-            Ok(r) => {
-                let p = r.platform_info().unwrap();
-                info!("Power profile = {:?}", p.power_profile);
-                info!("Interrupt model = {:?}", p.interrupt_model);
-                info!(
-                    "Boot Processor Info = {:?}",
-                    &p.processor_info.as_ref().unwrap().boot_processor
-                );
-                info!(
-                    "Application Processor Info = {:?}",
-                    &p.processor_info.unwrap().application_processors
-                );
-                info!("PM Timer = {:?}", p.pm_timer.unwrap().base);
-            }
-            Err(err) => panic!("couldn't get ACPI tables"),
-        }
+        // let res = unsafe { AcpiTables::from_rsdp(handler, rdsp as usize) };
+        // match res {
+        //     Ok(r) => {
+        //         let p = r.platform_info().unwrap();
+        //         info!("Power profile = {:?}", p.power_profile);
+        //         info!("Interrupt model = {:?}", p.interrupt_model);
+        //         info!(
+        //             "Boot Processor Info = {:?}",
+        //             &p.processor_info.as_ref().unwrap().boot_processor
+        //         );
+        //         info!(
+        //             "Application Processor Info = {:?}",
+        //             &p.processor_info.unwrap().application_processors
+        //         );
+        //         info!("PM Timer = {:?}", p.pm_timer.unwrap().base);
+        //     }
+        //     Err(err) => panic!("couldn't get ACPI tables"),
+        // }
     }
 
     quick(rt, config_table);

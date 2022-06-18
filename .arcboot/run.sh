@@ -1,7 +1,4 @@
-# NOTE: run.sh is actually run in the root proj dir
-# so the paths should be relative to that
-
-# IDK why but it doesnt seem to auto boot from /EFI/BOOT/BOOTARM.EFI
+# idk about VARS.fd maybe we can store it into the VFAT instead of VARS.fd. It comes with 44 variables
 
 cargo barm && \
 cd .arcboot && \
