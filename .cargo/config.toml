@@ -11,11 +11,5 @@ tarm = "test --target aarch64-unknown-uefi --no-run --features uefi_support"
 [build]
 out-dir = "build"
 
-[test]
-out-dir = "build"
-
-[target.aarch64-unknown-uefi]
-runner = ".arcboot/run.sh"
-
-[target.cfg.target_feature.no_uefi]
-rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
+# [target.cfg.target_feature.no_uefi]
+# rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]

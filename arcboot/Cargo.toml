@@ -20,6 +20,7 @@ goblin = { version = "0.5.2", default-features = false, features = [
 ] }
 linked_list_allocator = "0.9.1"
 qemu-exit = "3.0.1"
+spin = "0.9.3"
 # one_alloc = { version = "0.1.0", git = "https://github.com/ardaku/one_alloc" }
 # Requires std?
 # context-allocator = "0.2.3"

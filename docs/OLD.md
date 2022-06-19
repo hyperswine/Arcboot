@@ -35,3 +35,38 @@ const PAGE_TABLES_START: u64 = 0x3B9ACA00;
 ```
 
 Mostly notes to self or something.
+
+```rust
+    // region_length can just be size_of<T>
+    // info!(
+    //     "Virtual addr = {}. Region length = {}",
+    //     physical_address - 0x4000_0000,
+    //     size_of::<T>()
+    // );
+    // phys_addr - 0x4000_0000 doesnt crash sometimes, but doesnt find the tables either
+    // i have no idea, I think + 0x4000_0000 isnt correct because thats phys addr for some reason
+    // let va = NonNull::new((physical_address - 0x4000_0000) as *mut T).unwrap();
+    // Cant use 0x0 cause thats NULL
+    // let va = NonNull::new(0x0 as *mut T).unwrap();
+    // info!(
+    //     "Actual virtual addr = {}. Region length = {}",
+    //     0,
+    //     size_of::<T>()
+    // );
+
+    // Identity mapped pages => 1GB offset. So begins at 0x4000_0000 - 0xB847C000
+    // This chunk is 2GB (0x7847C000) in size
+
+    // maybe keep a Vec of regions here
+    // and always make virt start = 0
+
+    // Identity mapped virtual address space
+    // When UEFI/ACPI doesnt need it anymore, it expects the virtual address to be usable
+    // I think we can simulate an MMU for now
+    // pub struct IdentityMapping {
+    //     // originally, 48bit, so like
+    //     free_virtual_pages: Vec<u64>,
+    // }
+```
+
+I dunno. Damn it damn it.
