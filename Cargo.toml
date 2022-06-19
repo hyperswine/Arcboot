@@ -9,7 +9,7 @@ version = "0.1.1"
 members = ["export", "arcboot"]
 
 [dependencies]
-arcboot = { path = "arcboot" }
+arcboot = { path = "arcboot", features = ["builtin_allocator"] }
 arcboot_api = { path = "export", optional = true }
 log = { version = "0.4.11", default-features = false }
 # some problems with reexporting

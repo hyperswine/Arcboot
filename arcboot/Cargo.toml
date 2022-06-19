@@ -5,12 +5,6 @@ license = "GPL-3.0-only"
 name = "arcboot"
 version = "0.1.1"
 
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
-
 [dependencies]
 uefi = { version = "0.16.0", features = ["exts"], optional = true }
 acpi = { version = "4.1.0", optional = true }
@@ -49,4 +43,5 @@ x86_64 = "0.14.9"
 [features]
 default = ["uefi_support"]
 uefi_support = ["dep:uefi", "dep:acpi"]
+builtin_allocator = []
 archypervisor = []
