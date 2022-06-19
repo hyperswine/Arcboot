@@ -21,13 +21,17 @@ use alloc::{
     vec::{self, Vec},
 };
 use arcboot::{
-    logger::init_runtime_logger, memory::heap::init_heap, print_serial_line, write_uart,
-    write_uart_line,
+    efi::acpi::AcpiHandle, logger::init_runtime_logger, memory::heap::init_heap, print_serial_line,
+    write_uart, write_uart_line,
 };
 
 use arcboot::*;
 
-use core::{arch::asm, borrow::Borrow, ptr::NonNull};
+use core::{
+    arch::asm,
+    borrow::Borrow,
+    ptr::{null, NonNull},
+};
 use cortex_a::{asm, registers};
 use log::{info, Level, Metadata, Record};
 use tock_registers::interfaces::{Readable, Writeable};
@@ -44,8 +48,10 @@ use uefi::{
 };
 use uefi_macros::entry;
 
+use core::ffi::c_void;
+
 // maximum bytes (1248)
-pub const MAX_MEMORY_MAP_SIZE: usize = 1248;
+pub const MAX_MEMORY_MAP_SIZE: usize = 1400;
 
 // aligned to 64 bytes. Prob 8 bytes is better
 #[repr(C, align(8))]
@@ -78,6 +84,9 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     unsafe {
         print_serial_line!("0x4000_0000 = {}", *ptr.offset(0) as char);
         print_serial_line!("0x4000_0001 = {}", *ptr.offset(1) as char);
+
+        // print what is at 0x0
+        // print_serial_line!("Address of 0x0 = {:p}", 0x0 as *const u8);
     }
     info!("Hopefully you saw 2 diamond question marks");
 
@@ -91,10 +100,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let s = String::from("This is an Allocated String");
     info!("Printing Allocated String: {s}");
-    // 0xbf808110
+    // 0xbf80_8110 -> 3,212,869,904 bytes
     info!("address of allocated string = {:p}", &s);
 
-    // 0xBF807D70
+    // 0xBF80_7D70
     let sp = SP.get();
     info!("stack pointer EL1 = {sp:#04X}");
 
@@ -105,7 +114,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // Get the memory map
     let _size = bt.memory_map_size().map_size;
     info!("Memory map size (bytes)= {_size}");
-    // buffer too big it seems.. I have no idea why
 
     fn get_mem_map(bt: &BootServices) {
         let mut memory_map = AlignToMemoryDescriptor {
@@ -127,7 +135,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
         // for aarch64, generally
         // 0x0 - 0x400_0000 is MMIO
-        // BFFF_C000 - 0xBFFFD000 is MMIO
+        // BFFF_C000 - 0xBFFF_D000 is MMIO
         // 0x4000_0000 + 492632 * 4K is conventional
         // no MMIO anymore?? maybe cause of different heap
 
@@ -176,48 +184,68 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let config_table = st.config_table();
 
-    fn quick(rt: &RuntimeServices, config_table: &[ConfigTableEntry]) {
+    fn get_acpi_tables(rt: &RuntimeServices, config_table: &[ConfigTableEntry]) {
         let res = rt.variable_keys().unwrap();
-        // try EB9D2D30-2D88-11D3-9A16-0090273FC14D first
-        // try 8868E871-E4F1-11D3-BC22-0080C73C8881 next
 
         let rsdp = cfg::ACPI2_GUID;
+        let rsdp_v1 = cfg::ACPI_GUID;
 
-        // Find the value of RSDP
+        // Find value of RSDP v1
+        let res = config_table.iter().find(|c| c.guid == rsdp_v1);
+
+        let rsdp_v1 = match res {
+            Some(r) => {
+                info!("Found RSDP v1 entry, at addr = {:p}", r.address);
+                r.address
+            }
+            None => {
+                info!("Couldn't find RSDP in the ACPI v1 table... trying v2");
+                0 as *const c_void
+            }
+        };
+
+        // Find the value of RSDP v2. Always prioritise it if RSDP v1 is found
         let res = config_table.iter().find(|c| c.guid == rsdp);
 
         let rsdp = match res {
             Some(r) => {
-                info!("Found RSDP entry, at addr = {:p}", r.address);
+                info!("Found RSDP v2 entry, at addr = {:p}", r.address);
                 r.address
             }
             None => {
-                panic!("Couldn't find RSDP in the ACPI v2 table")
+                panic!("Couldn't find RSDP in the ACPI v2 table! Uh oh! Are you sure you set it up properly?")
             }
         };
 
-        // acpi
-        // let res = unsafe { AcpiTables::from_rsdp(handler, rsdp as usize) };
-        // match res {
-        //     Ok(r) => {
-        //         let p = r.platform_info().unwrap();
-        //         info!("Power profile = {:?}", p.power_profile);
-        //         info!("Interrupt model = {:?}", p.interrupt_model);
-        //         info!(
-        //             "Boot Processor Info = {:?}",
-        //             &p.processor_info.as_ref().unwrap().boot_processor
-        //         );
-        //         info!(
-        //             "Application Processor Info = {:?}",
-        //             &p.processor_info.unwrap().application_processors
-        //         );
-        //         info!("PM Timer = {:?}", p.pm_timer.unwrap().base);
-        //     }
-        //     Err(err) => panic!("couldn't get ACPI tables"),
-        // }
+        fn get_table(rsdp: *const c_void) {
+            let handler = AcpiHandle {};
+
+            let res = unsafe { AcpiTables::from_rsdp(handler, rsdp as usize) };
+            match res {
+                Ok(r) => {
+                    let p = r.platform_info().unwrap();
+                    info!("Power profile = {:?}", p.power_profile);
+                    info!("Interrupt model = {:?}", p.interrupt_model);
+                    info!(
+                        "Boot Processor Info = {:?}",
+                        &p.processor_info.as_ref().unwrap().boot_processor
+                    );
+                    info!(
+                        "Application Processor Info = {:?}",
+                        &p.processor_info.unwrap().application_processors
+                    );
+                    info!("PM Timer = {:?}", p.pm_timer.unwrap().base);
+                }
+                Err(err) => {
+                    panic!("Couldn't get ACPI tables. Maybe the handler wasnt set up properly?")
+                }
+            }
+        }
+
+        get_table(rsdp);
     }
 
-    quick(rt, config_table);
+    get_acpi_tables(rt, config_table);
 
     let curr_el = CurrentEL.get();
     assert_eq!(curr_el, 0x4);
