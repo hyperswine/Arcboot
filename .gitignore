@@ -3,3 +3,5 @@ target
 .idea
 out*
 uefi.cdr
+*.dts
+*.dtb
