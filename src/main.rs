@@ -1,6 +1,9 @@
 #![cfg_attr(not(test), no_std)]
-#![no_main]
-#![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
+#![cfg_attr(not(feature = "main_test"), no_main)]
+// maybe just make abi_efiapi there
+#![feature(abi_efiapi)]
+
+// ? somehow use the builtin_allocator feature
 
 // --------------
 // UEFI WRAPPERS
@@ -9,6 +12,9 @@
 #[macro_use]
 extern crate log;
 extern crate alloc;
+
+#[cfg(feature = "builtin_allocator")]
+use arcboot::memory::heap::init_heap;
 
 use aarch64::regs::{
     CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SP, SPSR_EL3, SP_EL1,
@@ -25,7 +31,6 @@ use arcboot::efi::get_mem_map;
 use arcboot::{
     efi::{acpi::AcpiHandle, AlignToMemoryDescriptor},
     logger::init_runtime_logger,
-    memory::heap::init_heap,
     print_serial_line, write_uart, write_uart_line,
 };
 
@@ -95,6 +100,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let bt = system_table.boot_services();
 
     // Initialise heap area at 0x4000_0000
+    #[cfg(feature = "builtin_allocator")]
     init_heap();
 
     let s = String::from("This is an Allocated String");
@@ -238,4 +244,18 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 
 // Disable stack protection
-#[no_mangle] extern "C" fn __chkstk () {}
+#[no_mangle]
+extern "C" fn __chkstk() {}
+
+// RUN cargo test --features main_test
+
+#[cfg(feature = "main_test")]
+fn main() {}
+
+#[cfg(feature = "main_test")]
+mod test {
+    #[test]
+    fn test_main() {
+        assert_eq!(0, 0);
+    }
+}

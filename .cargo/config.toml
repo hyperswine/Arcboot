@@ -2,11 +2,15 @@
 unstable-options = true
 
 [alias]
-barm = "build --target aarch64-unknown-uefi --features uefi_support -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem"
-bx86 = "build --target x86_64-unknown-uefi --features uefi_support"
-# define our own target for riscv, maybe use arc
-# brv = "build --target riscv64gc-uefi.json"
-tarm = "test --target aarch64-unknown-uefi --no-run --features uefi_support"
+# AARCH64
+barm = "build --target aarch64-unknown-uefi --features arcboot,builtin_allocator -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem"
+# x86_64
+bx86 = "build --target x86_64-unknown-uefi --features arcboot,builtin_allocator -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem"
+# RISCV64
+# ? define our own target for riscv, or maybe use arc
+brv = "build --target riscv64gc-uefi.json --features arcboot,builtin_allocator -Z build-std=core,alloc,compiler_builtins -Z build-std-features=compiler-builtins-mem"
+# FOR TESTING MAIN. For testing arcboot, use cargo test in Arcboot/arcboot
+t = "test --features main_test"
 
 [build]
 out-dir = "build"

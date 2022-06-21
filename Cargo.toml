@@ -9,7 +9,8 @@ version = "0.1.1"
 members = ["export", "arcboot"]
 
 [dependencies]
-arcboot = { path = "arcboot", features = ["builtin_allocator"] }
+# uses builtin allocator by default.. Maybe dont do that, and make it optional and build with cargo barm/x86
+arcboot = { path = "arcboot", optional = true}
 arcboot_api = { path = "export", optional = true }
 log = { version = "0.4.11", default-features = false }
 # some problems with reexporting
@@ -17,7 +18,11 @@ uefi = { version = "0.16.0", features = ["exts"] }
 uefi-macros = { version = "0.7.0" }
 
 [features]
+default = ["arcboot"]
 api = ["arcboot_api"]
-uefi_support = []
+arcboot = ["dep:arcboot"]
+# link this when barm
+builtin_allocator = ["arcboot/builtin_allocator"]
+# ? is there some way to link against a feature of a dep?
 # when testing main.rs, turn this on
 main_test = []
