@@ -188,8 +188,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let mem = TTBR1_EL1.get();
     print_serial_line!("TTBR1 EL1 = {mem:#b}\n");
 
+    // 0xBF807A90
     let sp = SP.get();
-    info!("stack pointer EL1 = {sp:#04X}");
+    info!("Stack pointer EL1 = {sp:#04X}");
+
+    // READ A BYTE FROM THE SP
 
     let mem = TCR_EL1::EPD1.val(0);
     print_serial_line!("TCR EL1 field 0 = {}\n", mem.value);

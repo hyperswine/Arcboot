@@ -11,7 +11,8 @@ use core::ops::RangeInclusive;
 pub trait MMU {
     /// Called during init. Supposed to take the translation tables from the
     /// `BSP`-supplied `virt_mem_layout()` => impl and call it for its MMU
-    unsafe fn enable_mmu_and_caching(&self) -> Result<(), MMUEnableError>;
+    /// TODO: add a param that takes in the kernel addr shift, from UEFI 64bit or something. Depending on the microarch armv8.0/2
+    unsafe fn enable_mmu_and_caching(&self, kernel_address_shift: i32) -> Result<(), MMUEnableError>;
 
     /// Returns true if the MMU is enabled, false otherwise
     fn is_enabled(&self) -> bool;

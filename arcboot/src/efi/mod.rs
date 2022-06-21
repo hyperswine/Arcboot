@@ -56,9 +56,7 @@ pub fn get_mem_map(bt: &BootServices) -> AlignToMemoryDescriptor {
         match res {
             Ok(r) => {
                 info!("Retrieved Memory Map!");
-                // identifies this memory map
                 info!("Memory Map Key = {:?}", &r.0);
-                // second...
                 let iterator_item = r.1;
                 iterator_item.for_each(|i| info!("Memory Descriptor = {i:?}"));
             }

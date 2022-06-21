@@ -2,6 +2,8 @@
 // DRIVERS
 // --------------
 
+// If not using UEFI, might as well use this
+#[cfg(not(feature = "uefi_support"))]
 pub mod pi4b;
 pub mod uart;
 
