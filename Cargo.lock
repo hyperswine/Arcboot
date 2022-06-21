@@ -33,24 +33,23 @@ dependencies = [
 
 [[package]]
 name = "arcboot"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aarch64",
  "acpi",
- "arcboot_api",
  "cortex-a",
  "embedded-hal",
  "goblin",
+ "lazy_static",
  "linked_list_allocator",
  "log",
  "qemu-exit",
  "riscv 0.8.0",
  "riscv-rt",
  "rustsbi",
+ "spin 0.9.3",
  "tock-registers",
  "uefi",
- "uefi-macros",
- "uefi-services",
  "x86_64",
 ]
 
@@ -61,6 +60,17 @@ dependencies = [
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.95",
+]
+
+[[package]]
+name = "arcboot_main"
+version = "0.1.1"
+dependencies = [
+ "arcboot",
+ "arcboot_api",
+ "log",
+ "uefi",
+ "uefi-macros",
 ]
 
 [[package]]
@@ -95,9 +105,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cortex-a"
-version = "7.2.0"
+version = "7.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27bd91f65ccd348bb2d043d98c5b34af141ecef7f102147f59bf5898f6e734ad"
+checksum = "ccdecab196d8cc1753b637e2e0f4a427247a2781f7a2cdf438a03fa6488a1b54"
 dependencies = [
  "tock-registers",
 ]
@@ -114,9 +124,9 @@ dependencies = [
 
 [[package]]
 name = "goblin"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c955ab4e0ad8c843ea653a3d143048b87490d9be56bd7132a435c2407846ac8f"
+checksum = "cfeb764aa29a0774d290c2df134a37ab2e3c1ba59009162626658aabefda321a"
 dependencies = [
  "log",
  "plain",
@@ -128,6 +138,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin 0.5.2",
+]
 
 [[package]]
 name = "linked_list_allocator"
@@ -382,6 +395,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c530c2b0d0bf8b69304b39fe2001993e267461948b890cd037d8ad4293fa1a0d"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "spinning_top"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -448,17 +476,6 @@ dependencies = [
  "proc-macro2 1.0.39",
  "quote 1.0.18",
  "syn 1.0.95",
-]
-
-[[package]]
-name = "uefi-services"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fa8d57b5388d35f8203951a41ef64672a93a5ce2a00414f63b73fe96d9c5348"
-dependencies = [
- "cfg-if",
- "log",
- "uefi",
 ]
 
 [[package]]
