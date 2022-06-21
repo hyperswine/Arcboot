@@ -19,3 +19,5 @@ uefi-macros = { version = "0.7.0" }
 [features]
 api = ["arcboot_api"]
 uefi_support = []
+# when testing main.rs, turn this on
+main_test = []
