@@ -114,7 +114,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     let _size = bt.memory_map_size().map_size;
     info!("Memory map size (bytes)= {_size}");
 
-    // !! ARCH64-UNKNOWN-UEFI OMEGALUL
     // let memory_map = get_mem_map(bt);
     handle_memory_map(bt);
 
@@ -145,14 +144,9 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     info!("max_mmap_size: {}", &max_mmap_size);
 
-    // ? why does this work?? WHY??
-    // but when I scope it, it doesnt. OMG
-
     let (st, _iter) = system_table
         .exit_boot_services(image, &mut mmap_storage[..])
         .expect("Failed to exit boot services");
-
-    // ? Maybe need an ARC
 
     // -----------
     // LOAD ARCBOOT DRIVERS
@@ -206,9 +200,8 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     print_serial_line!("Enabling TTBR0 walks...\n");
     // EnableTTBR0Walks.
 
-    // ! Setup new virtual table, IDK if TTBRR0 then prob doesnt make too much sense
+    // ! Setup new virtual table TTBR0
     // Maybe do that in the kernel. Also hand off mmap_storage to the kernel to give it an idea of the memory map
-    // Also LAI?? Use that in the kernel if possible. ACPI is pretty bad
     // st.set_virtual_address_map(map, new_system_table_virtual_addr);
 
     print_serial_line!("Attempting to Load Kernel...!");
@@ -225,21 +218,9 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     arcboot::efi::shutdown(st);
 }
 
-// Maybe the scoping rules in #[entry] isnt good enough
-// fn get_runtime_table(mmap_storage: &Box<u8>, mut system_table: &SystemTable<Boot>) -> (SystemTable<Runtime>, impl ExactSizeIterator<Item = &MemoryDescriptor> + Clone) {
-//     let m = &mut mmap_storage;
-//     let res = system_table
-//         .exit_boot_services(image, &mut m[..])
-//         .expect("Failed to exit boot services");
-
-//     res
-// }
-
 /// Move the mem descriptors here
 fn handle_memory_map(bootservices: &BootServices) {
     let res = get_mem_map(bootservices);
-
-    // set the global variable or something. Or maybe just have a global var in lib.rs
 }
 
 /// Load kernel
