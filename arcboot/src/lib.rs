@@ -1,9 +1,12 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(feature = "uefi_support", feature(abi_efiapi))]
 #![feature(alloc_error_handler)]
+// Prob not needed
 #![feature(asm_const)]
 // For unlikely branch compiler hint
 #![feature(core_intrinsics)]
+// For div cell
+#![feature(int_roundings)]
 
 // ---------------
 // CRATE WIDE USE
@@ -16,6 +19,7 @@ extern crate alloc;
 pub mod efi;
 pub mod qemu;
 pub mod logger;
+pub mod sync;
 
 // ---------------
 // RE-EXPORT

@@ -1,20 +1,24 @@
-// --------------
+// ---------------------
 // IMPORT
-// --------------
+// ---------------------
 
-use core::ops::RangeInclusive;
+use core::{
+    marker::PhantomData,
+    ops::{Add, RangeInclusive, Sub},
+};
 
-// --------------
+// ---------------------
 // MMU
-// --------------
+// ---------------------
 
 pub trait MMU {
-    /// Called during init. Supposed to take the translation tables from the
-    /// `BSP`-supplied `virt_mem_layout()` => impl and call it for its MMU
-    /// TODO: add a param that takes in the kernel addr shift, from UEFI 64bit or something. Depending on the microarch armv8.0/2
-    unsafe fn enable_mmu_and_caching(&self, kernel_address_shift: i32) -> Result<(), MMUEnableError>;
+    /// Turns on the MMU for the first time and enables data and instruction caching
+    unsafe fn enable_mmu_and_caching(
+        &self,
+        phys_tables_base_addr: Address<Physical>,
+    ) -> Result<(), MMUEnableError>;
 
-    /// Returns true if the MMU is enabled, false otherwise
+    /// Returns true if the MMU is enabled
     fn is_enabled(&self) -> bool;
 }
 
@@ -24,16 +28,117 @@ pub enum MMUEnableError {
     Other(&'static str),
 }
 
-// --------------
+// ---------------------
 // Address & Translation
-// --------------
+// ---------------------
+
+/// Metadata trait for marking the type of an address
+pub trait AddressType: Copy + Clone + PartialOrd + PartialEq + Ord + Eq {}
+
+/// Zero-sized type to mark a physical address
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum Physical {}
+
+/// Zero-sized type to mark a virtual address
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum Virtual {}
+
+/// Generic address type
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub struct Address<ATYPE: AddressType> {
+    value: usize,
+    _address_type: PhantomData<fn() -> ATYPE>,
+}
+
+// ---------------------
+// ADDRESS TYPE
+// ---------------------
+
+impl AddressType for Physical {}
+impl AddressType for Virtual {}
+
+// * For KernelGranule, theres prob a better idea. Maybe #[cfg(aarch64)] use arm64::KernelGranule
+
+impl<ATYPE: AddressType> Address<ATYPE> {
+    /// Create an instance
+    pub const fn new(value: usize) -> Self {
+        Self {
+            value,
+            _address_type: PhantomData,
+        }
+    }
+
+    /// Convert to usize
+    pub const fn as_usize(self) -> usize {
+        self.value
+    }
+
+    /// Align down to page size
+    #[must_use]
+    pub const fn align_down_page(self) -> Self {
+        // * KernelGranule should actually be set by UEFI. E.g. 64 * 1024 for 64K to index into L3
+        // 4 * 1024 for 4K
+        let aligned = align_down(self.value, KernelGranule::SIZE);
+
+        Self::new(aligned)
+    }
+
+    /// Align up to page size
+    #[must_use]
+    pub const fn align_up_page(self) -> Self {
+        let aligned = align_up(self.value, KernelGranule::SIZE);
+
+        Self::new(aligned)
+    }
+
+    /// Checks if the address is page aligned
+    pub const fn is_page_aligned(&self) -> bool {
+        is_aligned(self.value, KernelGranule::SIZE)
+    }
+
+    /// Return the address' offset into the corresponding page
+    pub const fn offset_into_page(&self) -> usize {
+        self.value & KernelGranule::MASK
+    }
+}
+
+impl<ATYPE: AddressType> Add<usize> for Address<ATYPE> {
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, rhs: usize) -> Self::Output {
+        match self.value.checked_add(rhs) {
+            None => panic!("Overflow on Address::add"),
+            Some(x) => Self::new(x),
+        }
+    }
+}
+
+impl<ATYPE: AddressType> Sub<Address<ATYPE>> for Address<ATYPE> {
+    type Output = Self;
+
+    #[inline(always)]
+    fn sub(self, rhs: Address<ATYPE>) -> Self::Output {
+        match self.value.checked_sub(rhs.value) {
+            None => panic!("Overflow on Address::sub"),
+            Some(x) => Self::new(x),
+        }
+    }
+}
 
 pub struct TranslationGranule<const GRANULE_SIZE: usize>;
+
+// DEFAULT GRANULE SIZE
+pub const DEFAULT_KERNEL_GRANULE_SIZE: usize = 4 * 1024;
+
+pub type KernelGranule = TranslationGranule<DEFAULT_KERNEL_GRANULE_SIZE>;
 
 impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     pub const SIZE: usize = Self::size_checked();
 
-    /// The granule's shift, basically log2(size)
+    pub const MASK: usize = Self::SIZE - 1;
+
+    /// The granule's left shift, basically log2(size)
     pub const SHIFT: usize = Self::SIZE.trailing_zeros() as usize;
 
     const fn size_checked() -> usize {
@@ -43,7 +148,7 @@ impl<const GRANULE_SIZE: usize> TranslationGranule<GRANULE_SIZE> {
     }
 }
 
-/// Implemented by a BSP. ACPI could prob detect it somehow
+/// Implemented by a BSP. ACPI could prob detect it somehow. All you really need is either the phys or virt space, normally 48
 pub struct AddressSpace<const AS_SIZE: usize>;
 
 impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
@@ -62,6 +167,15 @@ impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
 
         AS_SIZE
     }
+}
+
+/// For top half kernel
+pub trait AssociatedTranslationTable {
+    /// A translation table with range [u64::MAX, (u64::MAX - AS_SIZE) + 1]
+    type TableStartFromTop;
+
+    /// A translation table with range [AS_SIZE - 1, 0]
+    type TableStartFromBottom;
 }
 
 #[derive(Copy, Clone)]
@@ -117,8 +231,7 @@ pub struct KernelVirtualLayout<const NUM_SPECIAL_RANGES: usize> {
     inner: [TranslationDescriptor; NUM_SPECIAL_RANGES],
 }
 
-// A microarch should implement this. And be detectable at runtime with ACPI MMIO ranges
-// Or just hardcoded for testing
+// A microarch should implement this. And be detectable at runtime with ACPI MMIO ranges. Or just hardcoded for testing
 impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }> {
     pub const fn new(max: usize, layout: [TranslationDescriptor; NUM_SPECIAL_RANGES]) -> Self {
         Self {
@@ -148,5 +261,49 @@ impl<const NUM_SPECIAL_RANGES: usize> KernelVirtualLayout<{ NUM_SPECIAL_RANGES }
         }
 
         Ok((virt_addr, AttributeFields::default()))
+    }
+}
+
+// ---------------
+// ALIGN FUNCTIONS
+// ---------------
+
+#[inline(always)]
+pub const fn is_aligned(value: usize, alignment: usize) -> bool {
+    assert!(alignment.is_power_of_two());
+
+    (value & (alignment - 1)) == 0
+}
+
+/// Align down
+#[inline(always)]
+pub const fn align_down(value: usize, alignment: usize) -> usize {
+    assert!(alignment.is_power_of_two());
+
+    value & !(alignment - 1)
+}
+
+/// Align up
+#[inline(always)]
+pub const fn align_up(value: usize, alignment: usize) -> usize {
+    assert!(alignment.is_power_of_two());
+
+    (value + alignment - 1) & !(alignment - 1)
+}
+
+/// Convert a size into human readable format
+pub const fn size_human_readable_ceil(size: usize) -> (usize, &'static str) {
+    const KIB: usize = 1024;
+    const MIB: usize = 1024 * 1024;
+    const GIB: usize = 1024 * 1024 * 1024;
+
+    if (size / GIB) > 0 {
+        (size.div_ceil(GIB), "GiB")
+    } else if (size / MIB) > 0 {
+        (size.div_ceil(MIB), "MiB")
+    } else if (size / KIB) > 0 {
+        (size.div_ceil(KIB), "KiB")
+    } else {
+        (size, "Byte")
     }
 }

@@ -2,7 +2,7 @@
 // IMPORT
 //-------------------
 
-use crate::memory::mmu::{AddressSpace, MMUEnableError, TranslationGranule, MMU};
+use crate::memory::mmu::{AddressSpace, MMUEnableError, TranslationGranule, MMU, AssociatedTranslationTable, Address, Physical};
 use core::intrinsics::unlikely;
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
@@ -96,7 +96,13 @@ trait StartAddr {
     fn phys_start_addr_usize(&self) -> usize;
 }
 
-const NUM_LVL2_TABLES: usize = KernelAddrSpace::SIZE >> Granule512MiB::SHIFT;
+// ? Why change number of L2 tables?? Thats the one after L3
+const NUM_LVL2_TABLES: usize = KernelVirtAddrSpace::SIZE >> Granule512MiB::SHIFT;
+
+// 1 GiB worth of pages. L0 just refers to the actual frame and you add the offset to it
+pub const DEFAULT_KERNEL_VIRT_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024;
+
+pub type KernelVirtAddrSpace = AddressSpace<DEFAULT_KERNEL_VIRT_ADDR_SPACE_SIZE>;
 
 //-------------------
 // PAGING & MMU IMPL
@@ -145,22 +151,21 @@ impl MemoryManagementUnit {
         );
     }
 
-    /// Configure stage 1 of EL1 translation
-    /// TODO: maybe add a parameter to it
+    /// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
     fn configure_translation_control(&self, kernel_addr_space_log2: i32) {
-        let t0sz = (64 - kernel_addr_space_log2) as u64;
+        let t1sz = (64 - KernelVirtAddrSpace::SIZE_SHIFT) as u64;
 
         TCR_EL1.write(
-            TCR_EL1::TBI0::Used
+            TCR_EL1::TBI1::Used
                 + TCR_EL1::IPS::Bits_40
-                + TCR_EL1::TG0::KiB_64
-                + TCR_EL1::SH0::Inner
-                + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-                + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-                + TCR_EL1::EPD0::EnableTTBR0Walks
-                + TCR_EL1::A1::TTBR0
-                + TCR_EL1::T0SZ.val(t0sz)
-                + TCR_EL1::EPD1::DisableTTBR1Walks,
+                + TCR_EL1::TG1::KiB_64
+                + TCR_EL1::SH1::Inner
+                + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+                + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+                + TCR_EL1::EPD1::EnableTTBR1Walks
+                + TCR_EL1::A1::TTBR1
+                + TCR_EL1::T1SZ.val(t1sz)
+                + TCR_EL1::EPD0::DisableTTBR0Walks,
         );
     }
 }
@@ -171,38 +176,38 @@ pub fn mmu() -> &'static impl MMU {
 }
 
 impl MMU for MemoryManagementUnit {
-    unsafe fn enable_mmu_and_caching(&self, kernel_address_shift: i32) -> Result<(), MMUEnableError> {
+    unsafe fn enable_mmu_and_caching(
+        &self,
+        phys_tables_base_addr: Address<Physical>,
+    ) -> Result<(), MMUEnableError> {
         if unlikely(self.is_enabled()) {
             return Err(MMUEnableError::AlreadyEnabled);
         }
 
-        // Fail if translation granule (4K or 64K) is not supported
+        // Fail early if translation granule is not supported.
         if unlikely(!ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported)) {
             return Err(MMUEnableError::Other(
                 "Translation granule not supported in HW",
             ));
         }
 
-        // Prepare the memory attribute indirection register
+        // Prepare the memory attribute indirection register.
         self.set_up_mair();
 
-        // Populate translation tables
-        KERNEL_TABLES
-            .populate_tt_entries()
-            .map_err(MMUEnableError::Other)?;
+        // Set the "Translation Table Base Register".
+        TTBR1_EL1.set_baddr(phys_tables_base_addr.as_usize() as u64);
 
-        // Set the TTBR0 at EL1
-        TTBR0_EL1.set_baddr(KERNEL_TABLES.phys_base_address());
+        self.configure_translation_control();
 
-        self.configure_translation_control(kernel_address_shift);
-
-        // Switch the MMU on -> First, force all previous changes to be seen before the MMU is enabled
+        // Switch the MMU on.
+        //
+        // First, force all previous changes to be seen before the MMU is enabled.
         barrier::isb(barrier::SY);
 
-        // Enable the MMU and turn on data and instruction caching
+        // Enable the MMU and turn on data and instruction caching.
         SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
 
-        // Force MMU init to complete before next instruction
+        // Force MMU init to complete before next instruction.
         barrier::isb(barrier::SY);
 
         Ok(())
@@ -226,7 +231,8 @@ pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
 }
 
 /// A translation table type for the kernel space
-pub type KernelTranslationTable = FixedSizeTranslationTable<NUM_LVL2_TABLES>;
+pub type KernelTranslationTable =
+    <KernelVirtAddrSpace as AssociatedTranslationTable>::TableStartFromTop;
 
 // -----------------
 // UEFI INTERGRATION
