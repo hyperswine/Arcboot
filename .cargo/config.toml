@@ -15,5 +15,5 @@ t = "test --features main_test"
 [build]
 out-dir = "build"
 
-# [target.cfg.target_feature.no_uefi]
-# rustflags = ["-C", "link-arg=-Tbuild/aarch64/arcboot.ld"]
+# [not(target.cfg.target_feature.arcboot)]
+# rustflags = ["-C", "link-arg=-Tbuild/aarch64/bios_entry.ld"]
