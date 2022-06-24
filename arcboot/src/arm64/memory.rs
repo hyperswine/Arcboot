@@ -101,7 +101,7 @@ fn configure_translation_control() {
 
     TCR_EL1.write(
         TCR_EL1::TBI1::Used
-            // ? was 40
+            // ? was 40. In any case should be 256TiB
             + TCR_EL1::IPS::Bits_48
             + TCR_EL1::TG1::KiB_4
             + TCR_EL1::SH1::Inner

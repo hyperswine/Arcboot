@@ -59,8 +59,6 @@ use uefi_macros::entry;
 
 use core::ffi::c_void;
 
-// For RISC-V, use U-Boot
-
 // Mostly for setting up UEFI services. Calls other functions
 #[entry]
 fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
@@ -158,35 +156,24 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // LOAD ARCBOOT DRIVERS
     // -----------
 
-    // MAYBE JUST SETUP PAGING WITH 4-level page tables
-
     print_serial_line!("Hello from runtime!");
 
     let rt = unsafe { st.runtime_services() };
 
-    // PRINT OUT MEMORY MAP
-    // ? Need to cast this as an array of MemoryKey
-    // mmap_storage
-    //     .iter()
-    //     .for_each(|i| info!("Memory Descriptor (byte) = {i}"));
-
     let config_table = st.config_table();
-
-    // !! GET ACPI RSDT. AARCH64
-    // get_acpi_tables(rt, config_table);
 
     let curr_el = CurrentEL.get();
     assert_eq!(curr_el, 0x4);
-    print_serial_line!("Current EL = {}", curr_el);
+    info!("Current EL = {}", curr_el);
 
     let mem = MAIR_EL1.get();
-    print_serial_line!("MAIR EL1 = {mem:#b}\n");
+    info!("MAIR EL1 = {mem:#b}\n");
 
     let mem = TTBR0_EL1.get();
-    print_serial_line!("TTBR0 EL1 = {mem:#b}\n");
+    info!("TTBR0 EL1 = {mem:#b}\n");
 
     let mem = TTBR1_EL1.get();
-    print_serial_line!("TTBR1 EL1 = {mem:#b}\n");
+    info!("TTBR1 EL1 = {mem:#b}\n");
 
     // 0xBF807A90
     let sp = SP.get();
@@ -195,30 +182,30 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // READ A BYTE FROM THE SP
 
     let mem = TCR_EL1::EPD1.val(0);
-    print_serial_line!("TCR EL1 field 0 = {}\n", mem.value);
+    info!("TCR EL1 field 0 = {}\n", mem.value);
 
     // apparently doesnt work with macro?
     // since its not readable directly as a whole
     // let mem = TTBR0_EL2.read();
     // print_serial_line!("TTBR0 EL2 = {mem:#b}\n");
 
-    // I thought EnableTTBR1Walks sets TTBCR. But it actually sets TCR_EL1, one of the flags
-    print_serial_line!("Enabling TTBR0 walks...\n");
-    // EnableTTBR0Walks.
+    info!("Setting up Arc Memory Protocol...");
 
-    // ! Setup new virtual table TTBR0
-    // Maybe do that in the kernel. Also hand off mmap_storage to the kernel to give it an idea of the memory map
-    // st.set_virtual_address_map(map, new_system_table_virtual_addr);
+    // Maybe setup memory in the kernel. Could then hand off mmap_storage to the kernel to give it an idea of the memory map
+    // st.set_virtual_address_map(map, new_system_table_virtual_addr); Or use a custom format
     #[cfg(target_arch = "aarch64")]
     arcboot::arm64::memory::setup();
 
-    print_serial_line!("Attempting to Load Kernel...!");
+    info!("Attempting to Load Kernel...");
 
     // HAND OFF TO KERNEL. Search for an arcboot compliant kernel ELF img in the standard location on the main configured NeFS
     // or EFI boot config where DEFAULT_KERNEL_PARTITION=drive<number>partiton<number>
     // NOTE: before kernel loads userspace, do TLBI ALLE0 to clear TLB
     // PASS: the runtime services table, RSDP pointer, and thats pretty much it
     load_arcboot_kernel();
+
+    // GET ACPI RSDT. AARCH64, in the kernel
+    // get_acpi_tables(rt, config_table);
 
     // Kernel returns or traps to EL2 with reset exception/shutdown exception
     info!("Shutting down arcboot!");
