@@ -111,6 +111,9 @@ fn configure_translation_control() {
             + TCR_EL1::EPD0::DisableTTBR0Walks,
     );
 
+    // checker
+    // assert_eq!(0, 1);
+
     info!("Written to TCR_EL1");
 }
 
