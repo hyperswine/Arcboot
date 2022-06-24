@@ -209,6 +209,8 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // ! Setup new virtual table TTBR0
     // Maybe do that in the kernel. Also hand off mmap_storage to the kernel to give it an idea of the memory map
     // st.set_virtual_address_map(map, new_system_table_virtual_addr);
+    #[cfg(target_arch = "aarch64")]
+    arcboot::arm64::memory::setup();
 
     print_serial_line!("Attempting to Load Kernel...!");
 

@@ -2,7 +2,6 @@
 // IMPORT
 //-------------------
 
-use crate::memory::mmu::{AddressSpace, MMUEnableError, TranslationGranule, MMU, AssociatedTranslationTable, Address, Physical};
 use core::intrinsics::unlikely;
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
@@ -14,9 +13,7 @@ use tock_registers::{
 // DESCRIPTORS
 // ------------------
 
-// ? Uhh, so if using 4K instead of 64K, what happens? Just change a few vars and stuff and use 4 level paging?
-
-// Table descriptor for ARMv8-A (L1 & L2 64K) or (L0-L2 4K)
+// L0-L2 Table Descriptor, for Stage 1 EL1
 register_bitfields! {u64,
     STAGE1_TABLE_DESCRIPTOR [
         /// Physical address of the next descriptor [47:16]
@@ -32,7 +29,7 @@ register_bitfields! {u64,
     ]
 }
 
-// Last level descriptor for ARMv8-A
+// L3 Page Descriptor
 register_bitfields! {u64,
     STAGE1_PAGE_DESCRIPTOR [
         /// Unprivileged execute-never
@@ -77,165 +74,107 @@ register_bitfields! {u64,
     ]
 }
 
-/// A table descriptor for 64 KiB output
-#[derive(Copy, Clone)]
-#[repr(C)]
-struct TableDescriptor {
-    value: u64,
-}
-
-/// A page descriptor with 64 KiB output
-#[derive(Copy, Clone)]
-#[repr(C)]
-struct PageDescriptor {
-    value: u64,
-}
-
-trait StartAddr {
-    fn phys_start_addr_u64(&self) -> u64;
-    fn phys_start_addr_usize(&self) -> usize;
-}
-
-// ? Why change number of L2 tables?? Thats the one after L3
-const NUM_LVL2_TABLES: usize = KernelVirtAddrSpace::SIZE >> Granule512MiB::SHIFT;
-
-// 1 GiB worth of pages. L0 just refers to the actual frame and you add the offset to it
-pub const DEFAULT_KERNEL_VIRT_ADDR_SPACE_SIZE: usize = 1024 * 1024 * 1024;
-
-pub type KernelVirtAddrSpace = AddressSpace<DEFAULT_KERNEL_VIRT_ADDR_SPACE_SIZE>;
-
 //-------------------
 // PAGING & MMU IMPL
 //-------------------
 
-/// Memory Management Unit type. Could prob be created with a kernel shift
-struct MemoryManagementUnit;
-
-const PAGE_TABLES_START: u64 = 0x3B9ACA00;
-
-pub type Granule512MiB = TranslationGranule<{ 512 * 1024 * 1024 }>;
-pub type Granule64KiB = TranslationGranule<{ 64 * 1024 }>;
-
-/// Constants for indexing the MAIR_EL1
-#[allow(dead_code)]
-pub mod mair {
-    pub const DEVICE: u64 = 0;
-    pub const NORMAL: u64 = 1;
+/// Setup MAIR_EL1 for memory types that exist
+fn set_up_mair() {
+    // Define the memory types being mapped. Attribute 1 - Cacheable normal DRAM. Attribute 0 - Device
+    MAIR_EL1.write(
+        MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
+            + MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
+    );
 }
 
-/// TTBR0 EL1 at first. But should be made into TTBR1 somehow...
-static mut KERNEL_TABLES: KernelTranslationTable = KernelTranslationTable::new();
+/// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
+fn configure_translation_control() {
+    // ! Uh Maybe we dont need to write it if its already set, which Im pretty sure it should be by UEFI/firmware
+    // Maybe seg faulting here?
+    // let t1sz = (64 - TCR_EL1.read(TCR_EL1::T1SZ)) as u64;
+    let t1sz = 16;
 
-/// Always only one MMU. Which represents the entire system
-static MMU: MemoryManagementUnit = MemoryManagementUnit;
+    info!("Attempting to write to TCR_EL1...");
 
-impl<const AS_SIZE: usize> AddressSpace<AS_SIZE> {
-    /// Checks for architectural restrictions
-    pub const fn arch_address_space_size_sanity_checks() {
-        // Size must be at least one full 512 MiB table
-        assert!((AS_SIZE % Granule512MiB::SIZE) == 0);
+    // maybe cause disable ttbr0?
 
-        // Check for 48 bit virtual address size as maximum, which is supported by any ARMv8
-        assert!(AS_SIZE <= (1 << 48));
+    TCR_EL1.write(
+        TCR_EL1::TBI1::Used
+            // ? was 40
+            + TCR_EL1::IPS::Bits_48
+            + TCR_EL1::TG1::KiB_4
+            + TCR_EL1::SH1::Inner
+            + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::EPD1::EnableTTBR1Walks
+            + TCR_EL1::A1::TTBR1
+            + TCR_EL1::T1SZ.val(t1sz)
+            + TCR_EL1::EPD0::DisableTTBR0Walks,
+    );
+
+    info!("Written to TCR_EL1");
+}
+
+#[inline(always)]
+pub fn is_enabled_mmu() -> bool {
+    SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
+}
+
+/// Call this to enable MMU using a page table base addr
+pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &'static str> {
+    // FOR UEFI, would already be enabled and ID mapped
+    // if unlikely(is_enabled_mmu()) {
+    //     return Err("MMU already enabled!");
+    // }
+
+    info!("Attempting to enable MMU");
+
+    // Fail early if translation granule is not supported
+    if unlikely(!ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran4::Supported)) {
+        return Err("4KiB Translation granule not supported in HW");
     }
+
+    info!("Setting MAIR...");
+
+    // Prepare the memory attribute indirection register
+    set_up_mair();
+
+    info!("Setting TTBR1...");
+
+    // Set TTBR1
+    TTBR1_EL1.set_baddr(phys_tables_base_addr);
+
+    info!("Setting TCR_EL1...");
+
+    // Configure the EL1 translation
+    configure_translation_control();
+
+    info!("Setting SCTLR_EL1...");
+
+    // Switch MMU on. Ensure the MMU init instruction is executed after everything else
+    barrier::isb(barrier::SY);
+
+    // Enable the MMU + data + instruction caching
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+
+    barrier::isb(barrier::SY);
+
+    info!("Done! MMU setup complete");
+
+    Ok(())
 }
 
-impl MemoryManagementUnit {
-    /// Setup MAIR_EL1 for memory types that exist
-    fn set_up_mair(&self) {
-        // Define the memory types being mapped. Attribute 1 - Cacheable normal DRAM. Attribute 0 - Device
-        MAIR_EL1.write(
-            MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
-                + MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
-                + MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
-        );
-    }
+// Where to setup page tables? Maybe at 0x4000_1000 DRAM?
+// And then place kernel heap at 0x100000 virtual memory. Have to replace it after setting page tables
+// Or just do 0x8000_0000 for now
 
-    /// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
-    fn configure_translation_control(&self, kernel_addr_space_log2: i32) {
-        let t1sz = (64 - KernelVirtAddrSpace::SIZE_SHIFT) as u64;
-
-        TCR_EL1.write(
-            TCR_EL1::TBI1::Used
-                + TCR_EL1::IPS::Bits_40
-                + TCR_EL1::TG1::KiB_64
-                + TCR_EL1::SH1::Inner
-                + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-                + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
-                + TCR_EL1::EPD1::EnableTTBR1Walks
-                + TCR_EL1::A1::TTBR1
-                + TCR_EL1::T1SZ.val(t1sz)
-                + TCR_EL1::EPD0::DisableTTBR0Walks,
-        );
-    }
-}
-
-/// Static MMU instance
-pub fn mmu() -> &'static impl MMU {
-    &MMU
-}
-
-impl MMU for MemoryManagementUnit {
-    unsafe fn enable_mmu_and_caching(
-        &self,
-        phys_tables_base_addr: Address<Physical>,
-    ) -> Result<(), MMUEnableError> {
-        if unlikely(self.is_enabled()) {
-            return Err(MMUEnableError::AlreadyEnabled);
+pub fn setup() {
+    unsafe {
+        let res = enable_mmu_and_caching(0x4000_1000);
+        match res {
+            Ok(r) => info!("MMU enabled successfully!"),
+            Err(err) => panic!("MMU could not be started! Error = {err}"),
         }
-
-        // Fail early if translation granule is not supported.
-        if unlikely(!ID_AA64MMFR0_EL1.matches_all(ID_AA64MMFR0_EL1::TGran64::Supported)) {
-            return Err(MMUEnableError::Other(
-                "Translation granule not supported in HW",
-            ));
-        }
-
-        // Prepare the memory attribute indirection register.
-        self.set_up_mair();
-
-        // Set the "Translation Table Base Register".
-        TTBR1_EL1.set_baddr(phys_tables_base_addr.as_usize() as u64);
-
-        self.configure_translation_control();
-
-        // Switch the MMU on.
-        //
-        // First, force all previous changes to be seen before the MMU is enabled.
-        barrier::isb(barrier::SY);
-
-        // Enable the MMU and turn on data and instruction caching.
-        SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-
-        // Force MMU init to complete before next instruction.
-        barrier::isb(barrier::SY);
-
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn is_enabled(&self) -> bool {
-        SCTLR_EL1.matches_all(SCTLR_EL1::M::Enable)
     }
 }
-
-/// Big monolithic struct for storing the translation tables. Individual levels must be 64 KiB aligned, so the lvl3 is put first
-#[repr(C)]
-#[repr(align(65536))]
-pub struct FixedSizeTranslationTable<const NUM_TABLES: usize> {
-    /// Page descriptors, covering 64 KiB windows per entry
-    lvl3: [[PageDescriptor; 8192]; NUM_TABLES],
-
-    /// Table descriptors, covering 512 MiB windows
-    lvl2: [TableDescriptor; NUM_TABLES],
-}
-
-/// A translation table type for the kernel space
-pub type KernelTranslationTable =
-    <KernelVirtAddrSpace as AssociatedTranslationTable>::TableStartFromTop;
-
-// -----------------
-// UEFI INTERGRATION
-// -----------------
-
-// so i guess we somehow use UEFI
