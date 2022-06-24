@@ -90,14 +90,12 @@ fn set_up_mair() {
 
 /// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
 fn configure_translation_control() {
-    // ! Uh Maybe we dont need to write it if its already set, which Im pretty sure it should be by UEFI/firmware
-    // Maybe seg faulting here?
-    // let t1sz = (64 - TCR_EL1.read(TCR_EL1::T1SZ)) as u64;
+    // Should be at least 16, get from UEFI if possible
     let t1sz = 16;
 
     info!("Attempting to write to TCR_EL1...");
 
-    // maybe cause disable ttbr0?
+    // ? maybe cause I dont really have any tables at phys_tables_base_addr?
 
     TCR_EL1.write(
         TCR_EL1::TBI1::Used
@@ -123,10 +121,7 @@ pub fn is_enabled_mmu() -> bool {
 
 /// Call this to enable MMU using a page table base addr
 pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &'static str> {
-    // FOR UEFI, would already be enabled and ID mapped
-    // if unlikely(is_enabled_mmu()) {
-    //     return Err("MMU already enabled!");
-    // }
+    // FOR UEFI, would already be enabled and ID mapped, but we gotta reset some regs like TCR_EL1
 
     info!("Attempting to enable MMU");
 
