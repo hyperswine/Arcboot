@@ -19,7 +19,7 @@ use arcboot::memory::heap::init_heap;
 use aarch64::regs::{
     CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SP, SPSR_EL3, SP_EL1,
     TCR_EL1::{self, EPD0::EnableTTBR0Walks},
-    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
+    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1, SCTLR_EL1,
 };
 use acpi::{AcpiHandler, AcpiTables, PhysicalMapping};
 use alloc::{
@@ -167,6 +167,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("Current EL = {}", curr_el);
 
     // NOTE: append leading zeroes to get 64 bits
+
+    // SCTLR for endianess
+    let sctlr = SCTLR_EL1.get();
+    info!("SCTLR EL1 = {sctlr:#066b}\n");
+    // Endianess is in EE
+    // SCTLR_EL1::EE.read(0);
 
     // 0b0000000000000000000000000000000011111111101110110100010000000000
     let mem = MAIR_EL1.get();
