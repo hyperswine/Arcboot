@@ -166,31 +166,31 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     assert_eq!(curr_el, 0x4);
     info!("Current EL = {}", curr_el);
 
-    // 0b11111111101110110100010000000000
+    // NOTE: append leading zeroes to get 64 bits
+
+    // 0b0000000000000000000000000000000011111111101110110100010000000000
     let mem = MAIR_EL1.get();
-    info!("MAIR EL1 = {mem:#b}\n");
+    info!("MAIR EL1 = {mem:#066b}\n");
 
-    // 0b10111111111111111111000000000000
+    // 0b0000000000000000000000000000000010111111111111111111000000000000
     let mem = TTBR0_EL1.get();
-    info!("TTBR0 EL1 = {mem:#b}\n");
+    info!("TTBR0 EL1 = {mem:#066b}\n");
 
-    // 0b0
+    // 0b0000000000000000000000000000000000000000000000000000000000000000
     let mem = TTBR1_EL1.get();
-    info!("TTBR1 EL1 = {mem:#b}\n");
+    info!("TTBR1 EL1 = {mem:#066b}\n");
+
+    // 0b0000000000000000000000000000010010000000100000000011010100010100
+    let tcr = aarch64::regs::TCR_EL1.get();
+    info!("TCR EL1 = {tcr:#066b}\n");
 
     // 0xBF807A90
     let sp = SP.get();
     info!("Stack pointer EL1 = {sp:#04X}");
 
-    // READ A BYTE FROM THE SP
-
-    let mem = TCR_EL1::EPD1.val(0);
-    info!("TCR EL1 field 0 = {}\n", mem.value);
-
-    // apparently doesnt work with macro?
-    // since its not readable directly as a whole
+    // EXCEPTION DUE TO READING HIGHER EXCEPTION LEVEL CONTROL REG. I.e. security for hypervisor
     // let mem = TTBR0_EL2.read();
-    // print_serial_line!("TTBR0 EL2 = {mem:#b}\n");
+    // info!("TTBR0 EL2 = {mem:#b}\n");
 
     info!("Setting up Arc Memory Protocol...");
 
@@ -201,8 +201,7 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     info!("Attempting to Load Kernel...");
 
-    // HAND OFF TO KERNEL. Search for an arcboot compliant kernel ELF img in the standard location on the main configured NeFS
-    // or EFI boot config where DEFAULT_KERNEL_PARTITION=drive<number>partiton<number>
+    // HAND OFF TO KERNEL. Search for an arcboot compliant kernel ELF img in the standard location on the main configured NeFS or EFI boot config where DEFAULT_KERNEL_PARTITION=drive<number>partiton<number>
     // NOTE: before kernel loads userspace, do TLBI ALLE0 to clear TLB
     // PASS: the runtime services table, RSDP pointer, and thats pretty much it
     load_arcboot_kernel();
