@@ -16,6 +16,9 @@ log = { version = "0.4.11", default-features = false }
 # some problems with reexporting
 uefi = { version = "0.16.0", features = ["exts"] }
 uefi-macros = { version = "0.7.0" }
+# IDE issues, could prob fix some other way but meh
+aarch64 = "*"
+cortex-a = "*"
 
 [features]
 default = ["arcboot"]

@@ -17,16 +17,19 @@ extern crate log;
 extern crate alloc;
 
 pub mod efi;
-pub mod qemu;
 pub mod logger;
+pub mod qemu;
 pub mod sync;
 
 // ---------------
 // RE-EXPORT
 // ---------------
 
-pub use aarch64;
-pub use cortex_a;
+// #[cfg(target_arch = "aarch64")]
+// pub use aarch64;
+// #[cfg(target_arch = "aarch64")]
+// pub use cortex_a;
+
 pub use acpi;
 pub use tock_registers;
 // would use x86_64 as x86_64_arch

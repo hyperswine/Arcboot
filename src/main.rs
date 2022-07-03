@@ -31,7 +31,7 @@ use arcboot::efi::get_mem_map;
 use arcboot::{
     efi::{acpi::AcpiHandle, AlignToMemoryDescriptor},
     logger::init_runtime_logger,
-    print_serial_line, write_uart, write_uart_line,
+    print_serial_line,
 };
 
 use arcboot::*;
@@ -166,12 +166,15 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     assert_eq!(curr_el, 0x4);
     info!("Current EL = {}", curr_el);
 
+    // 0b11111111101110110100010000000000
     let mem = MAIR_EL1.get();
     info!("MAIR EL1 = {mem:#b}\n");
 
+    // 0b10111111111111111111000000000000
     let mem = TTBR0_EL1.get();
     info!("TTBR0 EL1 = {mem:#b}\n");
 
+    // 0b0
     let mem = TTBR1_EL1.get();
     info!("TTBR1 EL1 = {mem:#b}\n");
 
