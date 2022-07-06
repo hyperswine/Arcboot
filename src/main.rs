@@ -174,6 +174,8 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // Endianess is in EE
     // SCTLR_EL1::EE.read(0);
 
+    // 63 - 0 (little endian, [0] is LSB)
+
     // 0b0000000000000000000000000000000011111111101110110100010000000000
     let mem = MAIR_EL1.get();
     info!("MAIR EL1 = {mem:#066b}\n");
@@ -181,6 +183,8 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // 0b0000000000000000000000000000000010111111111111111111000000000000
     let mem = TTBR0_EL1.get();
     info!("TTBR0 EL1 = {mem:#066b}\n");
+
+    // no need to reset TTBR0 since we're not using it?
 
     // 0b0000000000000000000000000000000000000000000000000000000000000000
     let mem = TTBR1_EL1.get();
