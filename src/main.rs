@@ -48,7 +48,7 @@ use uefi::{
     prelude::*,
     proto::console::{serial::Serial, text::Output},
     table::{
-        boot::{OpenProtocolAttributes, OpenProtocolParams},
+        boot::{MemoryType, OpenProtocolAttributes, OpenProtocolParams},
         cfg::{self, ConfigTableEntry},
         runtime::VariableVendor,
         Runtime,
@@ -94,6 +94,17 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 
     let bt = system_table.boot_services();
 
+    // Ok maybe I should be allocating the pages first with bt
+    use uefi::table::boot::AllocateType::Address;
+
+    // IF TOO MUCH (0x4000_0000), WILL FAIL!
+    let status = bt.allocate_pages(Address(0x4000_0000), MemoryType::LOADER_DATA, 0x4000);
+
+    match status {
+        Ok(s) => info!("Allocate page success!"),
+        Err(err) => info!("Allocate page FAIL!"),
+    }
+
     // Initialise heap area at 0x4000_0000
     #[cfg(feature = "builtin_allocator")]
     init_heap();
@@ -110,6 +121,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
         print_serial_line!("0x4000_0001 = {}", *ptr.offset(1) as char);
     }
     info!("Hopefully you saw 'Th'");
+
+    // raw pointer
+    let p = &s as *const String;
+    unsafe {
+        print_serial_line!("&s = {:p}, p = {p:?}, deref p = {}", &s, *p);
+    }
 
     // 0xBF80_7D70
     let sp = SP.get();
@@ -190,6 +207,15 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // BASE ADDR = 0xBFFF_F000 (3.2G)
     let mem = TTBR0_EL1.get();
     info!("TTBR0 EL1 = {mem:#066b}\n");
+
+    let base_addr_ttbr0 = 0b10111111111111111111000000000000 as *const u64;
+    unsafe {
+        // NOTE only 32bits used...
+        // 3221217283 => 0xBFFF_E003 (thats the entry value)
+        // 10111111111111111110000000000011
+        // 31-16 is the actual output addr which is 49K
+        info!("ttbr0 first entry = {}", *base_addr_ttbr0.offset(0))
+    }
 
     // no need to reset TTBR0 since we're not using it?
 

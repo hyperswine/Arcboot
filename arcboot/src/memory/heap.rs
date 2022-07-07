@@ -27,4 +27,4 @@ pub fn zero_heap(heap_start: usize, heap_size: usize) {
 // STACK GROWS DOWN FROM AT (3.2G)
 // BUT FOR SOME REASON HEAP START ALWAYS AT 3.2G too??
 pub const HEAP_START: usize = 0x4000_0000;
-pub const HEAP_SIZE: usize = 0x4000_0000;
+pub const HEAP_SIZE: usize = 0x4000;
