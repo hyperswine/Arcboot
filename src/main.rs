@@ -17,9 +17,9 @@ extern crate alloc;
 use arcboot::memory::heap::init_heap;
 
 use aarch64::regs::{
-    CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SP, SPSR_EL3, SP_EL1,
+    CurrentEL, ELR_EL2, ELR_EL3, HCR_EL2, MAIR_EL1, SCTLR_EL1, SP, SPSR_EL3, SP_EL1,
     TCR_EL1::{self, EPD0::EnableTTBR0Walks},
-    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1, SCTLR_EL1,
+    TTBR0_EL1, TTBR0_EL2, TTBR1_EL1,
 };
 use acpi::{AcpiHandler, AcpiTables, PhysicalMapping};
 use alloc::{
@@ -86,9 +86,6 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     unsafe {
         print_serial_line!("0x4000_0000 = {}", *ptr.offset(0) as char);
         print_serial_line!("0x4000_0001 = {}", *ptr.offset(1) as char);
-
-        // print what is at 0x0
-        // print_serial_line!("Address of 0x0 = {:p}", 0x0 as *const u8);
     }
     info!("Hopefully you saw 2 diamond question marks");
 
@@ -105,6 +102,14 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("Printing Allocated String: {s}");
     // 0xbf80_8110 -> 3,212,869,904 bytes
     info!("Address of allocated string = {:p}", &s);
+
+    info!("[TEST] Printing from 0x4000_0000 again...");
+    let ptr: *const u8 = 0x4000_0000 as *const u8;
+    unsafe {
+        print_serial_line!("0x4000_0000 = {}", *ptr.offset(0) as char);
+        print_serial_line!("0x4000_0001 = {}", *ptr.offset(1) as char);
+    }
+    info!("Hopefully you saw 'Th'");
 
     // 0xBF80_7D70
     let sp = SP.get();
@@ -177,10 +182,12 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // 63 - 0 (little endian, [0] is LSB)
 
     // 0b0000000000000000000000000000000011111111101110110100010000000000
+    // nGnRE maybe
     let mem = MAIR_EL1.get();
     info!("MAIR EL1 = {mem:#066b}\n");
 
     // 0b0000000000000000000000000000000010111111111111111111000000000000
+    // BASE ADDR = 0xBFFF_F000 (3.2G)
     let mem = TTBR0_EL1.get();
     info!("TTBR0 EL1 = {mem:#066b}\n");
 
@@ -191,6 +198,16 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     info!("TTBR1 EL1 = {mem:#066b}\n");
 
     // 0b0000000000000000000000000000010010000000100000000011010100010100
+    // SO ITS ACTUALLY 6
+    // T0SZ = 20
+    // EPD0 = 0 => use TTBR0 for translation table walks (should be mutually exclusive with TTBR1?)
+    // IRGN = 10 => write through, cacheable inner
+    // ORGN0 = 10 => write through, cacheable outer
+    // SHO = 10 => outer shareable
+    // TG0 = 01 => 64KB granule for TTBR0 (what??)
+    // T1SZ = 0 (not set pretty much)
+    // A1 = 0 (TTBR0 defines the ASID)
+    // EPD1 = 0 (ON)
     let tcr = aarch64::regs::TCR_EL1.get();
     info!("TCR EL1 = {tcr:#066b}\n");
 

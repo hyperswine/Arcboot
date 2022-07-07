@@ -38,14 +38,6 @@ pub struct AlignToMemoryDescriptor([u8; MAX_MEMORY_MAP_SIZE]);
 
 use lazy_static::lazy_static;
 
-// !! RUST UEFI TOOLCHAIN FOR AARCH64 ARRRGH
-// lazy_static! {
-//     static ref EFI_MEMORY_MAP: Mutex<AlignToMemoryDescriptor> =
-//         Mutex::new(AlignToMemoryDescriptor {
-//             0: [0 as u8; MAX_MEMORY_MAP_SIZE],
-//         });
-// }
-
 pub fn get_mem_map(bt: &BootServices) -> AlignToMemoryDescriptor {
     let mut memory_map = AlignToMemoryDescriptor {
         0: [0 as u8; MAX_MEMORY_MAP_SIZE],
