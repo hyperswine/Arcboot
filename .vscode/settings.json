@@ -1,5 +1,5 @@
 {
-    "rust-analyzer.cargo.target": "aarch64-unknown-uefi",
+    "rust-analyzer.cargo.target": "aarch64-unknown-none",
     "files.associations": {
         "*.snapshot": "code-text-binary",
         "type_traits": "c"

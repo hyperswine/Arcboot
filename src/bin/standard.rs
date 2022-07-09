@@ -6,6 +6,7 @@
 // --------------
 
 // A standard entry uses the standard-<arch>.json target
+// And builds for a uboot-like target. With U-boot, have to also include a UBoot header
 
 extern "C" fn arcboot_entry() -> ! {
     loop {}

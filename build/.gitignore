@@ -1,8 +1,6 @@
-arcboot
-arcutils*
-*rlib
+*.rlib
 disasm*
 *.efi
 out
 libarcboot*
-standard
+*.elf
