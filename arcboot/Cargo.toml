@@ -18,7 +18,7 @@ goblin = { version = "0.5.2", default-features = false, features = [
     "endian_fd",
     "alloc",
 ] }
-linked_list_allocator = "0.9.1"
+linked_list_allocator = "0.10.0"
 qemu-exit = "3.0.1"
 spin = "0.9.3"
 # one_alloc = { version = "0.1.0", git = "https://github.com/ardaku/one_alloc" }
@@ -32,7 +32,7 @@ features = ["spin_no_std"]
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 rustsbi = "0.2.2"
 riscv = "0.8.0"
-riscv-rt = "0.8.1"
+riscv-rt = "0.9.0"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = "7.3.1"
@@ -42,7 +42,7 @@ aarch64 = "0.0.7"
 x86_64 = "0.14.9"
 
 [features]
-default = ["uefi_support"]
+default = []
 uefi_support = ["dep:uefi", "dep:acpi"]
 builtin_allocator = []
 archypervisor = []

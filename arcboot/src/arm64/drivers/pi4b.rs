@@ -52,6 +52,8 @@ pub static LAYOUT: KernelVirtualLayout<NUM_MEM_RANGES> = KernelVirtualLayout::ne
     ],
 );
 
+use core::ops::RangeInclusive;
+
 fn code_range_inclusive() -> RangeInclusive<usize> {
     // Notice the subtraction to turn the exclusive end into an inclusive end
     #[allow(clippy::range_minus_one)]

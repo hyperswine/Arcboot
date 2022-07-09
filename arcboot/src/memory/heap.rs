@@ -11,7 +11,7 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
 
 pub fn init_heap() {
     unsafe {
-        ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
+        ALLOCATOR.lock().init(HEAP_START as *mut u8, HEAP_SIZE);
     }
 }
 

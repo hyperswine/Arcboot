@@ -3,10 +3,8 @@
 // maybe just make abi_efiapi there
 #![feature(abi_efiapi)]
 
-// ? somehow use the builtin_allocator feature
-
 // --------------
-// UEFI WRAPPERS
+// UEFI ENTRY
 // --------------
 
 #[macro_use]

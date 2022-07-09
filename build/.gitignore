@@ -5,3 +5,4 @@ disasm*
 *.efi
 out
 libarcboot*
+standard

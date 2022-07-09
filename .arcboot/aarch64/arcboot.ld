@@ -1,13 +1,9 @@
-ENTRY(_start)
+ENTRY(arcboot_entry)
 
-/* Might not be needed for UEFI */
+/* FOR STANDARD ENTRY INTO FIRMWARE AT EL3/2 */
+/* IF NOT AT EL2 or 3, will panic */
 
-/* 
-1. setup sp at at a relatively safe paddr, 0x80000, set it to grow up? Down is fine too but the other segments must be loaded at the proper locations in physical RAM
-2. load .text, .data, .rodata, .bss as usual
-*/
-
-/* If the system is identity mapped, just load it at 0x80000 anway */
+/* Always load at 0x80000 for ARMv8 */
 VADDR_LOAD = 0x80000;
 PAGE_SIZE_LD = 4K;
 
@@ -17,8 +13,7 @@ BINARY_LOAD_ADDR = 0x80000;
 
 /* Ensure boot core stack is set to load */
 /* RO = 4, RX = 5, RW = 6, RWX = 7 */
-PHDRS
-{
+PHDRS {
     segment_code            PT_LOAD FLAGS(5);
     segment_data            PT_LOAD FLAGS(6);
     segment_boot_core_stack PT_LOAD FLAGS(6);
@@ -53,7 +48,6 @@ SECTIONS {
         . = ALIGN(16);
         __bss_end_exclusive = .;
     } :segment_data
-
 
 	/* STACK for the Boot Core */
 	. += PAGE_SIZE_LD;
