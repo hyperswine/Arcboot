@@ -6,11 +6,12 @@ name = "arcboot_main"
 version = "0.1.1"
 
 [workspace]
-members = ["export", "arcboot"]
+members = ["export", "macros", "arcboot"]
 
 [dependencies]
 arcboot = { path = "arcboot", optional = true }
 arcboot_api = { path = "export", optional = true }
+arcboot_macros = { path = "macros", optional = true }
 log = { version = "0.4.11", default-features = false }
 uefi = { version = "0.16.0", features = ["exts"] }
 uefi-macros = { version = "0.7.0" }
@@ -19,7 +20,7 @@ cortex-a = "7.4.0"
 
 [features]
 default = []
-api = ["arcboot_api"]
+api = ["arcboot_api", "arcboot_macros"]
 uefi_support = ["arcboot/uefi_support"]
 # link this for the most part, unless you want to link against some other allocator
 builtin_allocator = ["arcboot/builtin_allocator"]

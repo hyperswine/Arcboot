@@ -4,10 +4,3 @@ version = "0.1.0"
 edition = "2021"
 description = "The API for Arcboot based kernels"
 
-[lib]
-proc-macro = true
-
-[dependencies]
-quote = "1.0.18"
-proc-macro2 = "1.0.38"
-syn = { version = "1.0.94", features = ["full"] }
