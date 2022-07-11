@@ -9,6 +9,38 @@ use tock_registers::{
     register_bitfields,
 };
 
+// -------------
+// Memory
+// -------------
+
+// Default = 48 bit VA with 3 level page tables
+
+const PAGE_SIZE: usize = 4096;
+const PAGE_MASK: usize = PAGE_SIZE - 1;
+
+type PageTableIndex = [bool; 9];
+type PageTableOffset = [bool; 12];
+
+#[repr(C)]
+struct VirtualAddress48 {
+    offset: PageTableOffset,
+    l1_index: PageTableIndex,
+    l2_index: PageTableIndex,
+    l3_index: PageTableIndex,
+    ttbr_number: u16,
+}
+
+// In order to bookkeep page tables, require a pointer and a page fault handler
+// Or non existent page handler
+
+fn on_page_fault() {
+    // if page does not exist in the page table
+    // create a mapping using the next free frame
+    let next_free_frame: usize;
+
+    // or page is swapped to disk
+}
+
 // ------------------
 // DESCRIPTORS
 // ------------------
@@ -78,9 +110,8 @@ register_bitfields! {u64,
 // PAGING & MMU IMPL
 //-------------------
 
-/// Setup MAIR_EL1 for memory types that exist
+/// Setup MAIR_EL1 for memory attributes like writeback/writethrough and nGnRE
 fn set_up_mair() {
-    // Define the memory types being mapped. Attribute 1 - Cacheable normal DRAM. Attribute 0 - Device
     MAIR_EL1.write(
         MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
             + MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
@@ -90,16 +121,12 @@ fn set_up_mair() {
 
 /// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
 fn configure_translation_control() {
-    // Should be at least 16, get from UEFI if possible
     let t1sz = 16;
 
     info!("Attempting to write to TCR_EL1...");
 
-    // ? maybe cause I dont really have any tables at phys_tables_base_addr?
-
     TCR_EL1.write(
         // TCR_EL1::TBI1::Used
-        // ? was 40. In any case should be 256TiB
         TCR_EL1::IPS::Bits_48
             + TCR_EL1::TG0::KiB_4
             + TCR_EL1::TG1::KiB_4
@@ -107,17 +134,11 @@ fn configure_translation_control() {
             + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::EPD1::EnableTTBR1Walks
-            // enable instead of disable
+            // enable instead of disable, addresses depends on 1s or 0s
             + TCR_EL1::EPD0::EnableTTBR0Walks
             + TCR_EL1::A1::TTBR1
             + TCR_EL1::T1SZ.val(t1sz),
     );
-
-    // checker
-    // assert_eq!(0, 1);
-    // maybe screwed it up so it doesnt know how to panic
-    // I also dunno why heap is near the stack instead of 0x4000_0000
-    // panic!("Couldnt write");
 
     info!("Written to TCR_EL1");
 }
@@ -168,9 +189,9 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
     Ok(())
 }
 
-// Where to setup page tables? Maybe at 0x4000_1000 DRAM?
-// And then place kernel heap at 0x100000 virtual memory. Have to replace it after setting page tables
-// Or just do 0x8000_0000 for now
+// Where to setup page tables? Maybe at 0x4000_1000 DRAM? Really anywhere that isnt used rn, esp by the bootloader. If load bootloader at 0x80_000 DRAM and heap 0x4000_0000-0x4100_0000, start page tables TTBR1 at 0x4100_0000
+// Kernel should setup TTBR0 tables if possible. Though prob already setup by uboot. If ID mapped TTBR0, just leave it (since arcboot uses TTBR0 for its own code)
+// * make sure to make arcboot use TTBR0 addressing (all 0s)
 
 pub fn setup() {
     unsafe {
