@@ -16,16 +16,16 @@
 extern crate log;
 extern crate alloc;
 
-#[cfg(feature="uefi_support")]
-pub mod efi;
-pub mod logger;
-pub mod qemu;
-pub mod sync;
-
 // ---------------
 // API EXPORT
 // ---------------
 
+#[cfg(feature = "uefi_support")]
+pub mod efi;
+pub mod logger;
+pub mod qemu;
+pub mod sync;
+pub mod boot;
 pub mod memory;
 
 // ---------------
