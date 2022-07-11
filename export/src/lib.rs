@@ -59,14 +59,18 @@ impl<const D: usize, const M: usize> ArcServices<D, M> {
 
 // DEFAULTS
 
+pub type DefaultServices = ArcServices<1, 1>;
+
 // for testing
 
 /// Should be called by arcboot to make the structures and passed to neutron entry
-pub fn make_default() {
+pub fn make_default() -> DefaultServices {
     let device = ArcDevice::new(DeviceType::DRAM, 0);
     let devices = [device];
     let memory_map = [MemoryRegion {}];
     let service = ArcServices::new(PageTableTTBR1 {}, devices, memory_map);
+
+    service
 }
 
 // ---------------
@@ -74,6 +78,11 @@ pub fn make_default() {
 // ---------------
 
 #[test]
-fn test_basics() {
+fn basics() {
     assert_eq!(1, 1)
+}
+
+#[test]
+fn make_default_arc_services() {
+    make_default();
 }
