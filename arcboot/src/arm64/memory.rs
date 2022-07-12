@@ -202,3 +202,17 @@ pub fn setup() {
         }
     }
 }
+
+pub const KERNEL_BOOT_STACK_PAGES: usize = 16;
+pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
+// MMIO and other memory regions
+// USE DEVICE TREE! Or just arcservices/memory map
+// Gotta create that asap
+
+
+
+/// Maps the key kernel regions to TTBR1
+pub fn setup_kernel_tables() {
+    // map 16 pages from high
+
+}

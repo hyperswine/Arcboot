@@ -1,8 +1,12 @@
 #![no_std]
 
+extern crate alloc;
+
 // ---------------
 // ARCBOOT API
 // ---------------
+
+use alloc::vec::Vec;
 
 #[repr(C)]
 pub enum DeviceType {
@@ -34,6 +38,10 @@ impl ArcDevice {
             numa_id,
         }
     }
+}
+
+pub struct MemoryMap {
+    memory_regions: Vec<MemoryRegion>,
 }
 
 #[repr(C)]
