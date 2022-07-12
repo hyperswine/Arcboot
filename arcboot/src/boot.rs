@@ -13,7 +13,7 @@ const ELF64_HDR_SIZE: usize = 64;
 
 /// Given a kernel ELF img in bytes, parse and load its segments
 /// Then pass off execution to it. Should prob have setup TTBR1 and using those addresses (0xffff__ffff_ffff_ffff - 0x0000_ffff_ffff_ffff)
-pub fn load_kernel(kernel_img: &[u8]) {
+pub fn load_kernel(kernel_img: &[u8]) -> ! {
     // PARSE KERNEL ELF
 
     let header =
@@ -83,19 +83,21 @@ pub fn load_kernel(kernel_img: &[u8]) {
     let mut point_arc = &mut arcservices as *mut DefaultServices;
 
     // set a0 = *mut arcservices
-    unsafe { asm!("mov a0 {p}", p = inout(reg) point_arc) }
+    // unsafe { asm!("mov a0 {p}", p = inout(reg) point_arc) }
 
     let arc_entry = elf.header.e_entry as *const ();
     // transmute that addr to a function pointer
-    unsafe {
-        transmute::<*const (), fn(ArcServices)>(arc_entry)
-    }
+    let arc_entry_function = unsafe { transmute::<*const (), fn(ArcServices)>(arc_entry) };
+
+    // call (dont return, unless mapped bootloader's code section to kernel's TTBR1)
+    arc_entry_function(arcservices);
 
     // jump to header.entry
     // would be "j" on riscv/x86
     // * prob use an instruction barrier here?
+    // unsafe { asm!("br {arc_entry}", arc_entry = inout(reg) elf.header.e_entry) }
 
-    unsafe { asm!("br {arc_entry}", arc_entry = inout(reg) elf.header.e_entry) }
+    loop {}
 }
 
 #[test]
