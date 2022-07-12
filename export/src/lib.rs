@@ -64,14 +64,21 @@ pub struct ArcServices {
     paging: PageTableTTBR1,
     devices: Vec<ArcDevice>,
     memory_map: MemoryMap,
+    interrupt_handler_addr_start: u64,
 }
 
 impl ArcServices {
-    pub fn new(paging: PageTableTTBR1, devices: Vec<ArcDevice>, memory_map: MemoryMap) -> Self {
+    pub fn new(
+        paging: PageTableTTBR1,
+        devices: Vec<ArcDevice>,
+        memory_map: MemoryMap,
+        interrupt_handler_addr_start: u64,
+    ) -> Self {
         Self {
             paging,
             devices,
             memory_map,
+            interrupt_handler_addr_start,
         }
     }
 }
@@ -87,7 +94,7 @@ pub fn make_default() -> DefaultServices {
     let device = ArcDevice::new(DeviceType::DRAM, 0);
     let devices = vec![device];
     let memory_map = MemoryMap::default();
-    let service = ArcServices::new(PageTableTTBR1 {}, devices, memory_map);
+    let service = ArcServices::new(PageTableTTBR1 {}, devices, memory_map, 0x0);
 
     service
 }
