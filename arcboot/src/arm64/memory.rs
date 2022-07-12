@@ -203,9 +203,12 @@ pub fn setup() {
     }
 }
 
-// pub fn goto_table_descriptor(addr: u64) -> STAGE1_TABLE_DESCRIPTOR {
-//     STAGE1_TABLE_DESCRIPTOR{}
-// }
+pub fn goto_table_descriptor(addr: u64) -> u64 {
+    // dont get MMU to walk the table, manually do it
+    
+
+    0
+}
 
 pub const KERNEL_BOOT_STACK_PAGES: usize = 16;
 pub const KERNEL_BOOT_STACK_START: u64 = 0xFFFF_FFFF_FFFF_FFFF;
