@@ -1,6 +1,7 @@
 #![no_std]
 
 extern crate alloc;
+use alloc::vec;
 
 // ---------------
 // ARCBOOT API
@@ -44,19 +45,29 @@ pub struct MemoryMap {
     memory_regions: Vec<MemoryRegion>,
 }
 
-#[repr(C)]
-pub struct ArcServices<const D: usize, const M: usize> {
-    paging: PageTableTTBR1,
-    devices: [ArcDevice; D],
-    memory_map: [MemoryRegion; M],
+impl MemoryMap {
+    pub fn new(memory_regions: Vec<MemoryRegion>) -> Self {
+        Self { memory_regions }
+    }
 }
 
-impl<const D: usize, const M: usize> ArcServices<D, M> {
-    pub fn new(
-        paging: PageTableTTBR1,
-        devices: [ArcDevice; D],
-        memory_map: [MemoryRegion; M],
-    ) -> Self {
+impl Default for MemoryMap {
+    fn default() -> Self {
+        Self {
+            memory_regions: Default::default(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct ArcServices {
+    paging: PageTableTTBR1,
+    devices: Vec<ArcDevice>,
+    memory_map: MemoryMap,
+}
+
+impl ArcServices {
+    pub fn new(paging: PageTableTTBR1, devices: Vec<ArcDevice>, memory_map: MemoryMap) -> Self {
         Self {
             paging,
             devices,
@@ -67,15 +78,15 @@ impl<const D: usize, const M: usize> ArcServices<D, M> {
 
 // DEFAULTS
 
-pub type DefaultServices = ArcServices<1, 1>;
+pub type DefaultServices = ArcServices;
 
 // for testing
 
 /// Should be called by arcboot to make the structures and passed to neutron entry
 pub fn make_default() -> DefaultServices {
     let device = ArcDevice::new(DeviceType::DRAM, 0);
-    let devices = [device];
-    let memory_map = [MemoryRegion {}];
+    let devices = vec![device];
+    let memory_map = MemoryMap::default();
     let service = ArcServices::new(PageTableTTBR1 {}, devices, memory_map);
 
     service

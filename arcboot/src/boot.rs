@@ -1,4 +1,4 @@
-use core::arch::asm;
+use core::{arch::asm, intrinsics::transmute};
 
 use alloc::vec::Vec;
 use arcboot_api::{make_default, ArcServices, DefaultServices};
@@ -85,7 +85,11 @@ pub fn load_kernel(kernel_img: &[u8]) {
     // set a0 = *mut arcservices
     unsafe { asm!("mov a0 {p}", p = inout(reg) point_arc) }
 
-    // let arc_entry = elf.header.e_entry;
+    let arc_entry = elf.header.e_entry as *const ();
+    // transmute that addr to a function pointer
+    unsafe {
+        transmute::<*const (), fn(ArcServices)>(arc_entry)
+    }
 
     // jump to header.entry
     // would be "j" on riscv/x86
