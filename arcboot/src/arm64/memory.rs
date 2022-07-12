@@ -203,16 +203,43 @@ pub fn setup() {
     }
 }
 
+// pub fn goto_table_descriptor(addr: u64) -> STAGE1_TABLE_DESCRIPTOR {
+//     STAGE1_TABLE_DESCRIPTOR{}
+// }
+
 pub const KERNEL_BOOT_STACK_PAGES: usize = 16;
+pub const KERNEL_BOOT_STACK_START: u64 = 0xFFFF_FFFF_FFFF_FFFF;
+pub const KERNEL_BOOT_HEAP_START: u64 = 0x0000_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
 // MMIO and other memory regions
 // USE DEVICE TREE! Or just arcservices/memory map
 // Gotta create that asap
 
+/// Get a few free frames that you know ought to be free
+pub fn boot_free_frames() -> &'static [u64] {
+    static res: [u64; 1] = [0; 1];
 
+    &res
+}
+
+pub fn set_frame_used(frame: u64) {}
+
+/// Given a virtual address range, find free frames to map them to (4K aligned)
+/// region_size: number of pages
+pub fn map_region_ttbr1(region_start: u64, region_size: usize) {
+    let free_frames = boot_free_frames();
+
+    for r in 0..region_size {
+        // ttbr1.walk_addr_entry
+
+    }
+}
+
+use arcboot_api::MemoryMap;
 
 /// Maps the key kernel regions to TTBR1
-pub fn setup_kernel_tables() {
+pub fn setup_kernel_tables(memory_map: MemoryMap) {
     // map 16 pages from high
-
+    map_region_ttbr1(KERNEL_BOOT_STACK_START - 16 * 4096, KERNEL_BOOT_STACK_PAGES);
+    map_region_ttbr1(KERNEL_BOOT_HEAP_START, KERNEL_BOOT_HEAP_PAGES);
 }
