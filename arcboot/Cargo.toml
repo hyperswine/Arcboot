@@ -24,6 +24,8 @@ spin = "0.9.3"
 # one_alloc = { version = "0.1.0", git = "https://github.com/ardaku/one_alloc" }
 # Requires std?
 # context-allocator = "0.2.3"
+arcboot_api ={ path = "../export", version = "*"}
+
 [dependencies.scroll]
 version = "0.11"
 default_features = false

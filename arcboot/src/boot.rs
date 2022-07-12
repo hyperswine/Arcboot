@@ -1,12 +1,13 @@
 use core::arch::asm;
 
 use alloc::vec::Vec;
+use arcboot_api::{make_default, ArcServices, DefaultServices};
 use goblin::{
     container::{Container, Ctx},
     elf::{program_header, Elf, ProgramHeader},
 };
 
-use crate::memory::map_segment;
+use crate::memory::{map_segment, set_stack};
 
 const ELF64_HDR_SIZE: usize = 64;
 
@@ -72,11 +73,24 @@ pub fn load_kernel(kernel_img: &[u8]) {
         map_segment(sections[ind], p.p_vaddr);
     });
 
+    // set SP = elf.sp?? Nah just set it at 0xffff_ffff_....
+    // assume that paging has been setup properly for TTBR1 and we have switched to it. Beforehand, we should have also mapped 64K worth of frames down from 0xffff_...
+    set_stack(0xFFFF_FFFF_FFFF_FFFF);
+
+    // Pass ArcServices to the kernel
+    // * stack allocated, will disappear normally, so maybe ensure this function doesnt return too early or not at all? Also will be in the bootloader's stack, unless we reset the sp to the kernel's beforehand
+    let mut arcservices = make_default();
+    let mut point_arc = &mut arcservices as *mut DefaultServices;
+
+    // set a0 = *mut arcservices
+    unsafe { asm!("mov a0 {p}", p = inout(reg) point_arc) }
+
     // let arc_entry = elf.header.e_entry;
 
     // jump to header.entry
     // would be "j" on riscv/x86
-    // * use an instruction barrier here
+    // * prob use an instruction barrier here?
+
     unsafe { asm!("br {arc_entry}", arc_entry = inout(reg) elf.header.e_entry) }
 }
 

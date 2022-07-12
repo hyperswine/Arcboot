@@ -3,4 +3,3 @@ name = "arcboot_api"
 version = "0.1.0"
 edition = "2021"
 description = "The API for Arcboot based kernels"
-
