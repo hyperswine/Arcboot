@@ -1,4 +1,7 @@
-# Arcboot Bootloader
+---
+layout: default
+title: Building
+---
 
 The main bootloader images for riscv, arm and x86. I want to optimise for riscv but gonna do arm for now.
 

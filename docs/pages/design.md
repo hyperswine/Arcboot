@@ -1,4 +1,7 @@
-# Design
+---
+layout: default
+title: Design
+---
 
 Like Oreboot and GRUB, Arcboot is a multiboot UEFI bootloader. For stages 1 and 2 after platform firmware starts and loads the image (BIN or ELF) into RAM.
 

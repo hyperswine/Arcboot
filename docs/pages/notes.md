@@ -1,4 +1,7 @@
-# Technicalities
+---
+layout: default
+title: Notes
+---
 
 Technically, you dont need a bootloader if your kernel has an EFI stub associated with it. But arcboot is a complete UEFI bootloader so it can be configured a number of ways.
 

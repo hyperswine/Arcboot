@@ -1,4 +1,7 @@
-# Architecture
+---
+layout: default
+title: Architecture
+---
 
 ## RISC-V
 

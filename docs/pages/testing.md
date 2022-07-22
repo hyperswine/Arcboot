@@ -1,4 +1,7 @@
-# Testing Arcboot
+---
+layout: default
+title: Testing
+---
 
 I dunno rn tbh. It is quite close to bare metal. It is bare metal without std. A custom test harness is possible to use with a `arcutils` flasher and QEMU runner.
 

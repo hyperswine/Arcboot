@@ -1,4 +1,7 @@
-# What I removed
+---
+layout: default
+title: Removed
+---
 
 I had:
 

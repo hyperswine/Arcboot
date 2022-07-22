@@ -1,6 +1,8 @@
-# Arcboot Protocol
-
-The arcboot protocol is similar to limine and stivale. Except it is optimised for loading arcboot kernels like neutron. It also implements quantii boot protocol and multiboot.
+---
+layout: default
+title: Arcboot
+nav_order: 1
+---
 
 ## Overview
 
@@ -9,6 +11,10 @@ Arcboot allows arcboot kernels (just a bare ELF64 image) to be loaded and execut
 For complete systems like Pi4, Arcboot does not have a "vision" of what it is. It can load DTBs and setup MMIO with paging, but it will not drive a complete system as well as Neutron. That being said, for arm/riscv, DTBs are found on the `/boot/dtb` dir within the primary BOOT/EFI partition.
 
 NOTE: if EFI isnt needed, the arcboot partition will be simply flashed as a FAT32/QFS partition rather than an EFS partition.
+
+## Arcboot Protocol
+
+The arcboot protocol is similar to limine and stivale. Except it is optimised for loading arcboot kernels like neutron. It also implements quantii boot protocol and multiboot.
 
 ## Arcboot Compliant Kernel
 
