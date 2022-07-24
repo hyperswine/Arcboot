@@ -11,35 +11,24 @@ use tock_registers::{
 };
 
 // -------------
-// Memory
+// DEFINITIONS
 // -------------
 
-// Default = 48 bit VA with 3 level page tables
-
+/// Default = 48 bit VA with 4 level page tables
 const PAGE_SIZE: usize = 4096;
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
 type PageTableIndex = [bool; 9];
 type PageTableOffset = [bool; 12];
 
-#[repr(C)]
-struct VirtualAddress48 {
-    offset: PageTableOffset,
-    l1_index: PageTableIndex,
-    l2_index: PageTableIndex,
-    l3_index: PageTableIndex,
-    ttbr_number: u16,
-}
+// -------------
+// HANDLERS
+// -------------
 
-// In order to bookkeep page tables, require a pointer and a page fault handler
-// Or non existent page handler
-
+/// In order to bookkeep page tables, require a pointer and a page fault handler. Or non existent page handler
 fn on_page_fault() {
-    // if page does not exist in the page table
-    // create a mapping using the next free frame
+    // if page does not exist in the page table, create a mapping using the next free frame, or page is swapped to disk
     let next_free_frame: usize;
-
-    // or page is swapped to disk
 }
 
 // ------------------
@@ -52,7 +41,7 @@ fn on_page_fault() {
 bitfield! {
     pub struct TableDescriptor4K(u64);
     impl Debug;
-    u8;
+    u32;
     pub ns_table, set_ns_table: 63;
     pub ap_table, set_ap_table: 62, 61;
     pub xn_table, set_xn_table: 60;
@@ -65,7 +54,7 @@ bitfield! {
 bitfield! {
     pub struct BlockDescriptor4K(u64);
     impl Debug;
-    u8;
+    u32;
     pub custom, set_custom: 58, 55;
     pub uxn, set_uxn: 54;
     pub pxn, set_pxn: 53;
@@ -76,74 +65,56 @@ bitfield! {
     pub access_flag, set_access_flag: 10;
     pub shared, set_shared: 9, 8;
     pub access_permissions, set_access_permissions: 7, 6;
-    pub ns, set_ns: 5;
+    pub non_secure, set_non_secure: 5;
     pub index_into_mair, set_index_into_mair: 4, 2;
 }
 
-// L0-L2 Table Descriptor, for Stage 1 EL1
-register_bitfields! {u64,
-    STAGE1_TABLE_DESCRIPTOR [
-        /// Physical address of the next descriptor [47:16]
-        NEXT_LEVEL_TABLE_ADDR_64KiB OFFSET(16) NUMBITS(32) [],
-        TYPE  OFFSET(1) NUMBITS(1) [
-            Block = 0,
-            Table = 1
-        ],
-        VALID OFFSET(0) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ]
-    ]
-}
-
-// L3 Page Descriptor
-register_bitfields! {u64,
-    STAGE1_PAGE_DESCRIPTOR [
-        /// Unprivileged execute-never
-        UXN      OFFSET(54) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
-        /// Privileged execute-never
-        PXN      OFFSET(53) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
-        /// Physical address of the next table descriptor (lvl2) or the page descriptor (lvl3)
-        OUTPUT_ADDR_64KiB OFFSET(16) NUMBITS(32) [],
-        /// Access Flag
-        AF       OFFSET(10) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ],
-        /// Shareable
-        SH       OFFSET(8) NUMBITS(2) [
-            OuterShareable = 0b10,
-            InnerShareable = 0b11
-        ],
-        /// Access Permissions
-        AP       OFFSET(6) NUMBITS(2) [
-            RW_EL1 = 0b00,
-            RW_EL1_EL0 = 0b01,
-            RO_EL1 = 0b10,
-            RO_EL1_EL0 = 0b11
-        ],
-        /// Memory attributes index into MAIR_EL1
-        AttrIndx OFFSET(2) NUMBITS(3) [],
-        TYPE     OFFSET(1) NUMBITS(1) [
-            Reserved_Invalid = 0,
-            Page = 1
-        ],
-        VALID    OFFSET(0) NUMBITS(1) [
-            False = 0,
-            True = 1
-        ]
-    ]
+// 4K VAddr (should be 1s for TTBR1)
+bitfield! {
+    pub struct VAddr48_4K(u64);
+    impl Debug;
+    u16;
+    pub sign, set_sign: 63, 48;
+    pub l0_index, set_l0_index: 47, 39;
+    pub l1_index, set_l1_index: 38, 30;
+    pub l2_index, set_l2_index: 29, 21;
+    pub l3_index, set_l3_index: 21, 12;
+    pub offset, set_offset: 11, 0;
 }
 
 //-------------------
 // PAGING & MMU IMPL
 //-------------------
+
+pub type PageNumber = u64;
+
+/// Statically sized Stack of Free Pages
+pub struct FreePages<const N: usize> {
+    curr_head: usize,
+    pages: [PageNumber; N],
+}
+
+impl<const N: usize> FreePages<N> {
+    pub fn new(curr_head: usize, pages: [PageNumber; N]) -> Self {
+        Self { curr_head, pages }
+    }
+
+    pub fn push(&mut self, page_number: PageNumber) {
+        self.curr_head += 1;
+        self.pages[self.curr_head] = page_number;
+    }
+
+    pub fn pop(&mut self) -> PageNumber {
+        let res = self.pages[self.curr_head];
+        self.curr_head -= 1;
+
+        res
+    }
+
+    pub fn size(&self) -> usize {
+        self.pages.len()
+    }
+}
 
 /// Setup MAIR_EL1 for memory attributes like writeback/writethrough and nGnRE
 fn set_up_mair() {
