@@ -7,6 +7,7 @@
 #![feature(core_intrinsics)]
 // For div cell
 #![feature(int_roundings)]
+#![feature(type_alias_impl_trait)]
 
 // ---------------
 // CRATE WIDE USE

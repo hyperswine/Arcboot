@@ -70,6 +70,17 @@ Mostly notes to self or something.
     //     // originally, 48bit, so like
     //     free_virtual_pages: Vec<u64>,
     // }
+
+    // for aarch64, generally
+    // 0x0 - 0x400_0000 is MMIO
+    // BFFF_C000 - 0xBFFF_D000 is MMIO
+    // 0x4000_0000 + 492632 * 4K is conventional
+    // no MMIO anymore?? maybe cause of different heap
+
+    // 1GB-3GB ('phys') is DRAM
+    // maybe it means vaddr with a 1GB offset
+
+    // memory_map
 ```
 
 I dunno. Damn it damn it.
