@@ -25,6 +25,7 @@ spin = "0.9.3"
 # Requires std?
 # context-allocator = "0.2.3"
 arcboot_api ={ path = "../export", version = "*"}
+bitfield = "0.14.0"
 
 [dependencies.scroll]
 version = "0.11"

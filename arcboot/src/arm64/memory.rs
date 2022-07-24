@@ -2,6 +2,7 @@
 // IMPORT
 //-------------------
 
+use bitfield::bitfield;
 use core::intrinsics::unlikely;
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
@@ -44,6 +45,40 @@ fn on_page_fault() {
 // ------------------
 // DESCRIPTORS
 // ------------------
+
+// NOTE: set each field to a repr(C) enum
+
+// 4K => starts with 1's
+bitfield! {
+    pub struct TableDescriptor4K(u64);
+    impl Debug;
+    u8;
+    pub ns_table, set_ns_table: 63;
+    pub ap_table, set_ap_table: 62, 61;
+    pub xn_table, set_xn_table: 60;
+    pub pxn_table, set_pxn_table: 59;
+    pub next_lvl_table_addr, set_next_lvl_table_addr: 47, 12;
+    pub ones, set_ones: 1, 0;
+}
+
+// 4K => starts with 0's
+bitfield! {
+    pub struct BlockDescriptor4K(u64);
+    impl Debug;
+    u8;
+    pub custom, set_custom: 58, 55;
+    pub uxn, set_uxn: 54;
+    pub pxn, set_pxn: 53;
+    pub contig, set_config: 52;
+    pub output_addr, set_output_addr: 47, 12;
+    pub zeroes, set_zeroes: 1, 0;
+    pub non_gathering, set_non_gathering: 11;
+    pub access_flag, set_access_flag: 10;
+    pub shared, set_shared: 9, 8;
+    pub access_permissions, set_access_permissions: 7, 6;
+    pub ns, set_ns: 5;
+    pub index_into_mair, set_index_into_mair: 4, 2;
+}
 
 // L0-L2 Table Descriptor, for Stage 1 EL1
 register_bitfields! {u64,
@@ -207,7 +242,7 @@ pub fn goto_table_descriptor(addr: u64) -> u64 {
     // dont get MMU to walk the table, manually do it
     let x: u64 = 1;
     // cast x as STAGE 1 descriptor
-    x.
+
     0
 }
 
