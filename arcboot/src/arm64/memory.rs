@@ -205,8 +205,9 @@ pub fn setup() {
 
 pub fn goto_table_descriptor(addr: u64) -> u64 {
     // dont get MMU to walk the table, manually do it
-    
-
+    let x: u64 = 1;
+    // cast x as STAGE 1 descriptor
+    x.
     0
 }
 
@@ -214,9 +215,10 @@ pub const KERNEL_BOOT_STACK_PAGES: usize = 16;
 pub const KERNEL_BOOT_STACK_START: u64 = 0xFFFF_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_START: u64 = 0x0000_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
-// MMIO and other memory regions
-// USE DEVICE TREE! Or just arcservices/memory map
-// Gotta create that asap
+// MMIO and other memory regions. USE DEVICE TREE! Or just arcservices/memory map. Gotta create that asap
+
+// TODO: setup the paging structures by impl'ing arcboot_api's ArcMemory
+// how does limine do it?
 
 /// Get a few free frames that you know ought to be free
 pub fn boot_free_frames() -> &'static [u64] {
@@ -227,14 +229,12 @@ pub fn boot_free_frames() -> &'static [u64] {
 
 pub fn set_frame_used(frame: u64) {}
 
-/// Given a virtual address range, find free frames to map them to (4K aligned)
-/// region_size: number of pages
+/// Given a virtual address range, find free frames to map them to (4K aligned). Region_size: number of pages
 pub fn map_region_ttbr1(region_start: u64, region_size: usize) {
     let free_frames = boot_free_frames();
 
     for r in 0..region_size {
         // ttbr1.walk_addr_entry
-
     }
 }
 
