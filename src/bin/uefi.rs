@@ -24,7 +24,7 @@ use alloc::{
     string::String,
     vec::{self, Vec},
 };
-use arcboot::efi::acpi::get_acpi_tables;
+use arcboot::efi::{acpi::get_acpi_tables, MemoryMapEFI};
 use arcboot::efi::get_mem_map;
 use arcboot::{
     efi::{acpi::AcpiHandle, AlignToMemoryDescriptor},
@@ -134,12 +134,11 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     bt.get_image_file_system(image)
         .expect("Failed to retrieve boot file system");
 
-    // Get the memory map
+    // Get the memory map size (note is pretty useless unless we use Alloc)
     let _size = bt.memory_map_size().map_size;
     info!("Memory map size (bytes)= {_size}");
-
-    // let memory_map = get_mem_map(bt);
-    handle_memory_map(bt);
+    // Get actual EFI Memory Map
+    let mem_map = handle_memory_map(bt);
 
     // -----------
     // UEFI STARTUP CHECKS
@@ -267,8 +266,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
 }
 
 /// Move the mem descriptors here
-fn handle_memory_map(bootservices: &BootServices) {
+fn handle_memory_map(bootservices: &BootServices) -> MemoryMapEFI {
     let res = get_mem_map(bootservices);
+
+    res
 }
 
 /// Load kernel
