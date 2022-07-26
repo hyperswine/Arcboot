@@ -7,7 +7,6 @@ use core::intrinsics::unlikely;
 use cortex_a::{asm::barrier, registers::*};
 use tock_registers::{
     interfaces::{ReadWriteable, Readable, Writeable},
-    register_bitfields,
 };
 
 // -------------
@@ -197,7 +196,7 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
 
 // Where to setup page tables? Maybe at 0x4000_1000 DRAM? Really anywhere that isnt used rn, esp by the bootloader. If load bootloader at 0x80_000 DRAM and heap 0x4000_0000-0x4100_0000, start page tables TTBR1 at 0x4100_0000
 // Kernel should setup TTBR0 tables if possible. Though prob already setup by uboot. If ID mapped TTBR0, just leave it (since arcboot uses TTBR0 for its own code)
-// * make sure to make arcboot use TTBR0 addressing (all 0s)
+// * Make sure to make arcboot use TTBR0 addressing (all 0s)
 
 pub fn setup() {
     unsafe {
@@ -221,10 +220,9 @@ pub const KERNEL_BOOT_STACK_PAGES: usize = 16;
 pub const KERNEL_BOOT_STACK_START: u64 = 0xFFFF_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_START: u64 = 0x0000_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
-// MMIO and other memory regions. USE DEVICE TREE! Or just arcservices/memory map. Gotta create that asap
 
-// TODO: setup the paging structures by impl'ing arcboot_api's ArcMemory
-// how does limine do it?
+// MMIO and other memory regions. USE DEVICE TREE! Or just arcservices/memory map. Gotta create that asap
+// TODO: setup the paging structures by impl'ing arcboot_api's ArcMemory. How does limine do it?
 
 /// Get a few free frames that you know ought to be free
 pub fn boot_free_frames() -> &'static [u64] {
@@ -251,4 +249,6 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
     // map 16 pages from high
     map_region_ttbr1(KERNEL_BOOT_STACK_START - 16 * 4096, KERNEL_BOOT_STACK_PAGES);
     map_region_ttbr1(KERNEL_BOOT_HEAP_START, KERNEL_BOOT_HEAP_PAGES);
+
+    // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr
 }
