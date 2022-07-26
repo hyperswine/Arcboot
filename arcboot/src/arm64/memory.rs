@@ -2,12 +2,11 @@
 // IMPORT
 //-------------------
 
+use arcboot_api::MemoryMap;
 use bitfield::bitfield;
 use core::intrinsics::unlikely;
 use cortex_a::{asm::barrier, registers::*};
-use tock_registers::{
-    interfaces::{ReadWriteable, Readable, Writeable},
-};
+use tock_registers::interfaces::{ReadWriteable, Readable, Writeable};
 
 // -------------
 // DEFINITIONS
@@ -221,34 +220,47 @@ pub const KERNEL_BOOT_STACK_START: u64 = 0xFFFF_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_START: u64 = 0x0000_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
 
-// MMIO and other memory regions. USE DEVICE TREE! Or just arcservices/memory map. Gotta create that asap
-// TODO: setup the paging structures by impl'ing arcboot_api's ArcMemory. How does limine do it?
+// MMIO and other memory regions. USE DEVICE TREE or UEFI
 
-/// Get a few free frames that you know ought to be free
-pub fn boot_free_frames() -> &'static [u64] {
-    static res: [u64; 1] = [0; 1];
+// ? Get a few free frames that you know ought to be free
+// NOT POSSIBLE AS A STATIC METHOD, only for neutron when you link
+// pub fn boot_free_frames() -> &'static [u64] {
+//     static res: [u64; 1] = [0; 1];
 
-    &res
-}
+//     &res
+// }
 
 pub fn set_frame_used(frame: u64) {}
 
 /// Given a virtual address range, find free frames to map them to (4K aligned). Region_size: number of pages
-pub fn map_region_ttbr1(region_start: u64, region_size: usize) {
-    let free_frames = boot_free_frames();
-
+pub fn map_region_ttbr1<const N: usize>(
+    region_start: u64,
+    region_size: usize,
+    free_frames: &mut FreePages<N>,
+) {
     for r in 0..region_size {
         // ttbr1.walk_addr_entry
     }
 }
 
-use arcboot_api::MemoryMap;
-
 /// Maps the key kernel regions to TTBR1
 pub fn setup_kernel_tables(memory_map: MemoryMap) {
-    // map 16 pages from high
-    map_region_ttbr1(KERNEL_BOOT_STACK_START - 16 * 4096, KERNEL_BOOT_STACK_PAGES);
-    map_region_ttbr1(KERNEL_BOOT_HEAP_START, KERNEL_BOOT_HEAP_PAGES);
+    // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr? Nope, 2GB down
 
-    // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr
+    // 0x0 and 0xFFFF... should always be reserved vaddrs i think. For specific blocks, not general areas or stack or something
+
+    let n_pages = 100;
+    let mut free_frames = FreePages::new(n_pages - 1, [100]);
+
+    // map 16 pages from high
+    map_region_ttbr1(
+        KERNEL_BOOT_STACK_START - 16 * 4096,
+        KERNEL_BOOT_STACK_PAGES,
+        &mut free_frames,
+    );
+    map_region_ttbr1(
+        KERNEL_BOOT_HEAP_START,
+        KERNEL_BOOT_HEAP_PAGES,
+        &mut free_frames,
+    );
 }
