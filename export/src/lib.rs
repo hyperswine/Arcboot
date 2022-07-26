@@ -23,8 +23,36 @@ pub enum DeviceType {
 #[repr(C)]
 pub struct PageTableTTBR1;
 
+/// For ArcAPI only. When exposing to userspace (rust std), use neutron memory regions
+pub enum MemoryRegionType {
+    Standard,
+    MMIO,
+    ACPI,
+}
+
+pub type AddressRange = (u64, u64);
+
+/// Get the address range (4K granule)
+pub fn address_range_4k(start_addr: u64, n_pages: u64) -> AddressRange {
+    let res = (start_addr, start_addr + n_pages * 4096);
+
+    res
+}
+
 #[repr(C)]
-pub struct MemoryRegion;
+pub struct MemoryRegion {
+    region_type: MemoryRegionType,
+    address_range: AddressRange,
+}
+
+impl MemoryRegion {
+    pub fn new(region_type: MemoryRegionType, address_range: AddressRange) -> Self {
+        Self {
+            region_type,
+            address_range,
+        }
+    }
+}
 
 #[repr(C)]
 pub struct ArcDevice {
@@ -48,6 +76,10 @@ pub struct MemoryMap {
 impl MemoryMap {
     pub fn new(memory_regions: Vec<MemoryRegion>) -> Self {
         Self { memory_regions }
+    }
+
+    pub fn push(&mut self, memory_region: MemoryRegion) {
+        self.memory_regions.push(memory_region);
     }
 }
 
