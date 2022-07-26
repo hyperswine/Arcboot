@@ -1,5 +1,7 @@
+use alloc::vec;
 use alloc::vec::Vec;
-use uefi::table::boot::MemoryDescriptor;
+use arcboot_api::{address_range_4k, MemoryMap, MemoryRegion, MemoryRegionType};
+use uefi::table::boot::{MemoryDescriptor, MemoryType};
 use uefi::{
     prelude::BootServices,
     table::{runtime::ResetType, Runtime, SystemTable},
@@ -72,9 +74,56 @@ pub fn get_mem_map(bt: &BootServices) -> MemoryMapEFI {
     m
 }
 
-/// Export ArcMemory
-pub fn create_arc_memory_from_uefi(mem_map: &MemoryMapEFI) {
+/// Physical RAM Regions that can be directly mapped as Standard Pages
+pub const EFI_FREE_MEMORY_REGIONS: &[MemoryType] = &[
+    MemoryType::LOADER_CODE,
+    MemoryType::LOADER_DATA,
+    MemoryType::BOOT_SERVICES_CODE,
+    MemoryType::BOOT_SERVICES_DATA,
+    MemoryType::CONVENTIONAL,
+    MemoryType::PERSISTENT_MEMORY,
+];
+
+/// Usable as Standard Pages after retrieving ACPI Tables and all of its data
+pub const EFI_RECLAIMABLE_MEMORY_REGIONS: &[MemoryType] =
+    &[MemoryType::ACPI_RECLAIM, MemoryType::ACPI_NON_VOLATILE];
+
+/// Memory Regions that shouldn't be used directly, but mapped by AllocateMemory() I think
+pub const EFI_ACPI_S_STATE_REGIONS: &[MemoryType] = &[
+    MemoryType::RUNTIME_SERVICES_CODE,
+    MemoryType::RUNTIME_SERVICES_DATA,
+];
+
+/// RAM Ranges that are hooked onto by the MMIO Controller, and need to be marked as pass-through, non-cacheable, with strong ordering, no buffering
+pub const EFI_MMIO_MEMORY_REGIONS: &[MemoryType] = &[MemoryType::MMIO_PORT_SPACE, MemoryType::MMIO];
+
+/// Export ArcMemory. NOTE: you should enable ACPI and retrieve the tables, and esp the MMIO APIs before using the regions
+pub fn create_arc_memory_from_uefi(mem_map: &MemoryMapEFI) -> MemoryMap {
+    let mut arc_memory_map = MemoryMap::new(vec![]);
+
     for mem_region in mem_map {
-        
+        // based on the type, make the MemoryRegion and add it to the map
+        let res = if EFI_FREE_MEMORY_REGIONS.contains(&mem_region.ty)
+            || EFI_FREE_MEMORY_REGIONS.contains(&mem_region.ty)
+        {
+            MemoryRegion::new(
+                MemoryRegionType::Standard,
+                address_range_4k(mem_region.phys_start, mem_region.page_count),
+            )
+        } else if EFI_ACPI_S_STATE_REGIONS.contains(&mem_region.ty) {
+            MemoryRegion::new(
+                MemoryRegionType::ACPI,
+                address_range_4k(mem_region.phys_start, mem_region.page_count),
+            )
+        } else {
+            MemoryRegion::new(
+                MemoryRegionType::Standard,
+                address_range_4k(mem_region.phys_start, mem_region.page_count),
+            )
+        };
+
+        arc_memory_map.push(res);
     }
+
+    arc_memory_map
 }
