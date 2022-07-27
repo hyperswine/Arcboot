@@ -65,6 +65,8 @@ impl MemoryRegion {
     }
 }
 
+// Maybe wrap around ACPI.. I think its a good idea
+
 #[repr(C)]
 pub struct ArcDevice {
     device_type: DeviceType,
@@ -105,6 +107,10 @@ impl Default for MemoryMap {
 // ? maybe instead of a direct memory map, you set it up in a higher abstract way
 // cause you already setup paging and interrupt vectors, neutron just has to
 // use it somehow, and it can ditch if it wants
+
+pub struct ArcMemory {
+
+}
 
 #[repr(C)]
 pub struct ArcServices {
