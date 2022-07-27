@@ -272,6 +272,23 @@ pub fn make_page_table(free_frame: u64) -> u64 {
     free_frame
 }
 
+/// Makes new table and points prev descriptor at it
+pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u64) {
+    // create an l1 table and update that descriptor
+    // POINT THE ORIGINAL L0 ENTRY TO NEW as well. Pass L0 entry u64 addr to it?
+    // Point and set to valid basically, for entry curr-1
+    make_page_table(table_frame);
+    let mut l0_desc = TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
+    // set valid and next_level_table_flags
+    l0_desc.set_valid(true);
+    l0_desc.set_next_lvl_table_addr(table_frame);
+
+    // write volatile to point at new table addr
+    unsafe {
+        core::ptr::write_volatile(table_frame as *mut u64, l0_desc.0);
+    }
+}
+
 /// Given a virtual address range, find free frames to map them to (4K aligned). Region_size: number of pages
 pub fn map_region_ttbr1<const N: usize>(
     region_start: u64,
@@ -303,28 +320,17 @@ pub fn map_region_ttbr1<const N: usize>(
         let l0_index = actual_vaddr.l0_index();
         let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
-        let l2_table_addr = match l1_table_addr {
+        // damn, ok maybe get the index as well from get_next_lvl_table
+
+        let (l2_table_addr, l1_base_addr) = match l1_table_addr {
             Some(l) => get_next_lvl_table(base_pt_addr, l),
             None => {
-                // make this into a gen_new_table(prev_table_base_addr, TABLE/BLOCK) function, and maybe return none as well
-
                 // create an l1 table and update that descriptor
                 let table_frame = free_frames.pop();
-                // POINT THE ORIGINAL L0 ENTRY TO NEW as well. Pass L0 entry u64 addr to it?
-                // Point and set to valid basically, for entry curr-1
-                make_page_table(table_frame);
-                let mut l0_desc = TableDescriptor4K(get_table_desc(base_pt_addr, l0_index));
-                // set valid and next_level_table_flags
-                l0_desc.set_valid(true);
-                l0_desc.set_next_lvl_table_addr(table_frame);
-
-                // write volatile to point at new table addr
-                unsafe {
-                    core::ptr::write_volatile(table_frame as *mut u64, l0_desc.0);
-                }
+                setup_table(table_frame, base_pt_addr, l0_index);
 
                 // return the next one, which is unmapped
-                None
+                (None, table_frame)
             }
         };
 
@@ -332,7 +338,7 @@ pub fn map_region_ttbr1<const N: usize>(
             Some(l) => get_next_lvl_table(base_pt_addr, l),
             None => {
                 let table_frame = free_frames.pop();
-                make_page_table(table_frame);
+                setup_table(table_frame, base_pt_addr, l0_index);
                 None
             }
         };
