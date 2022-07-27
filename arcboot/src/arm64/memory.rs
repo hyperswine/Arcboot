@@ -120,6 +120,18 @@ impl<const N: usize> FreePages<N> {
     }
 }
 
+#[inline(always)]
+pub fn disable_mmu() {
+    unsafe {
+        barrier::isb(barrier::SY);
+
+        // Enable the MMU + data + instruction caching
+        SCTLR_EL1.modify(SCTLR_EL1::M::Disable);
+
+        barrier::isb(barrier::SY);
+    }
+}
+
 /// Setup MAIR_EL1 for memory attributes like writeback/writethrough and nGnRE
 fn set_up_mair() {
     MAIR_EL1.write(
@@ -130,6 +142,7 @@ fn set_up_mair() {
 }
 
 /// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
+/// NOTE: Arcboot will also use TTBR1 (since they are both on and TTBR0 is meant for EL0)
 fn configure_translation_control() {
     let t1sz = 16;
 
@@ -332,7 +345,10 @@ pub fn map_region_ttbr1<const N: usize>(
         // frame number = table base_addr / 4K
 
         let (l2_table_addr, l1_base_addr) = match l1_table_addr {
-            Some(l) => (get_next_lvl_table(base_pt_addr, l), base_addr_to_page_number(base_pt_addr)),
+            Some(l) => (
+                get_next_lvl_table(base_pt_addr, l),
+                base_addr_to_page_number(base_pt_addr),
+            ),
             None => {
                 // create an l1 table and update that descriptor
                 let table_frame = free_frames.pop();
@@ -344,7 +360,10 @@ pub fn map_region_ttbr1<const N: usize>(
         };
 
         let l3_table_addr = match l2_table_addr {
-            Some(l) => (get_next_lvl_table(l1_base_addr, l), base_addr_to_page_number(l1_base_addr)),
+            Some(l) => (
+                get_next_lvl_table(l1_base_addr, l),
+                base_addr_to_page_number(l1_base_addr),
+            ),
             None => {
                 let table_frame = free_frames.pop();
                 setup_table(table_frame, base_pt_addr, l0_index);
@@ -366,12 +385,17 @@ pub fn initialise_l0_table(table_base_addr: u64) {
 
 /// Maps the key kernel regions to TTBR1
 pub fn setup_kernel_tables(memory_map: MemoryMap) {
+    // turn off paging and the mmu
+    disable_mmu();
+
     // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr? Nope, 2GB down
 
     // 0x0 and 0xFFFF... should always be reserved vaddrs i think. For specific blocks, not general areas or stack or something
 
     let n_pages = 100;
     let mut free_frames = FreePages::new(n_pages - 1, [100]);
+
+    // rewrite ttbr1
 
     // map 16 pages from high
     map_region_ttbr1(
@@ -384,6 +408,8 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
         KERNEL_BOOT_HEAP_PAGES as u64,
         &mut free_frames,
     );
+
+    // after kernel pages are setup, idk
 }
 
 // ------------------
