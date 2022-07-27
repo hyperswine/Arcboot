@@ -230,7 +230,7 @@ pub fn get_table_desc(base_addr: u64, index: u64) -> u64 {
     }
 }
 
-/// For L0-L2 Page Tables
+/// For L0-L2 Page Tables. Also returns the actual frame number of the table
 pub fn get_next_lvl_table(base_pt_addr: u64, l_index: u64) -> Option<u64> {
     let level_descriptor = TableDescriptor4K(get_table_desc(base_pt_addr, l_index));
 
@@ -289,6 +289,11 @@ pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u6
     }
 }
 
+/// Turn an address base to a page numbe
+pub fn base_addr_to_page_number(addr: u64) -> u64 {
+    addr / PAGE_SIZE as u64
+}
+
 /// Given a virtual address range, find free frames to map them to (4K aligned). Region_size: number of pages
 pub fn map_region_ttbr1<const N: usize>(
     region_start: u64,
@@ -318,12 +323,14 @@ pub fn map_region_ttbr1<const N: usize>(
         // FOR NOW: if one of the levels returns Option::None, make the descriptor using another free frame
 
         let l0_index = actual_vaddr.l0_index();
+        // What if base table wasnt mapped? Or encountered? western
         let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
         // damn, ok maybe get the index as well from get_next_lvl_table
+        // frame number = table base_addr / 4K
 
         let (l2_table_addr, l1_base_addr) = match l1_table_addr {
-            Some(l) => get_next_lvl_table(base_pt_addr, l),
+            Some(l) => (get_next_lvl_table(base_pt_addr, l), base_addr_to_page_number(base_pt_addr)),
             None => {
                 // create an l1 table and update that descriptor
                 let table_frame = free_frames.pop();
@@ -335,16 +342,17 @@ pub fn map_region_ttbr1<const N: usize>(
         };
 
         let l3_table_addr = match l2_table_addr {
-            Some(l) => get_next_lvl_table(base_pt_addr, l),
+            Some(l) => (get_next_lvl_table(l1_base_addr, l), base_addr_to_page_number(l1_base_addr)),
             None => {
                 let table_frame = free_frames.pop();
                 setup_table(table_frame, base_pt_addr, l0_index);
-                None
+                (None, table_frame)
             }
         };
 
         // NOW, get the output addr (since L3 entries are block descriptors)
-        let output_addr = get_output_addr_block(base_pt_addr, l3_table_addr);
+        // based on if l3 is even mapped. I think UEFI should zero out..? Or at least ensure the free pages have valid = false?
+        // let output_addr = get_output_addr_block(base_pt_addr, l3_table_addr);
     }
 }
 
@@ -370,9 +378,9 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
     );
 }
 
-// -------------
-// HANDLERS
-// -------------
+// ------------------
+// INTERRUPT HANDLERS
+// ------------------
 
 /// In order to bookkeep page tables, require a pointer and a page fault handler. Or non existent page handler
 fn on_page_fault() {
