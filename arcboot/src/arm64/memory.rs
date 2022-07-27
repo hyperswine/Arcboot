@@ -273,6 +273,7 @@ pub fn make_page_table(free_frame: u64) -> u64 {
 }
 
 /// Makes new table and points prev descriptor at it
+/// Can be used to setup l0
 pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u64) {
     // create an l1 table and update that descriptor
     // POINT THE ORIGINAL L0 ENTRY TO NEW as well. Pass L0 entry u64 addr to it?
@@ -295,6 +296,7 @@ pub fn base_addr_to_page_number(addr: u64) -> u64 {
 }
 
 /// Given a virtual address range, find free frames to map them to (4K aligned). Region_size: number of pages
+/// ENSURE THAT L0 Table exists and has been initialised to invalid entries where needed
 pub fn map_region_ttbr1<const N: usize>(
     region_start: u64,
     n_pages: u64,
@@ -323,7 +325,7 @@ pub fn map_region_ttbr1<const N: usize>(
         // FOR NOW: if one of the levels returns Option::None, make the descriptor using another free frame
 
         let l0_index = actual_vaddr.l0_index();
-        // What if base table wasnt mapped? Or encountered? western
+        // What if base table wasnt mapped? Or encountered?
         let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
         // damn, ok maybe get the index as well from get_next_lvl_table
@@ -354,6 +356,12 @@ pub fn map_region_ttbr1<const N: usize>(
         // based on if l3 is even mapped. I think UEFI should zero out..? Or at least ensure the free pages have valid = false?
         // let output_addr = get_output_addr_block(base_pt_addr, l3_table_addr);
     }
+}
+
+/// Initialise the base table (TTBR0 or 1)
+pub fn initialise_l0_table(table_base_addr: u64) {
+    let table_frame = table_base_addr / PAGE_SIZE as u64;
+    make_page_table(table_frame);
 }
 
 /// Maps the key kernel regions to TTBR1
