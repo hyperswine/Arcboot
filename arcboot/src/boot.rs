@@ -49,6 +49,9 @@ pub fn load_kernel(kernel_img: &[u8]) -> ! {
         Err(err) => panic!("Error! {err}"),
     };
 
+    // NOTE: addresses should start with 1s for arm64 and x86_64
+    // for riscv, prob similar..?
+
     let sections: Vec<&[u8]> = elf
         .program_headers
         .iter()
