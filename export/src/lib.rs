@@ -20,8 +20,19 @@ pub enum DeviceType {
     Unknown,
 }
 
+// Neutron doesnt have to touch the registers directly,
+// instead it can use PTTTBR1.set(), .read(), etc to do it
+
 #[repr(C)]
-pub struct PageTableTTBR1;
+pub struct PageTableTTBR1 {
+    phys_addr_base: u64,
+}
+
+impl PageTableTTBR1 {
+    pub fn new(phys_addr_base: u64) -> Self {
+        Self { phys_addr_base }
+    }
+}
 
 /// For ArcAPI only. When exposing to userspace (rust std), use neutron memory regions
 pub enum MemoryRegionType {
@@ -91,6 +102,10 @@ impl Default for MemoryMap {
     }
 }
 
+// ? maybe instead of a direct memory map, you set it up in a higher abstract way
+// cause you already setup paging and interrupt vectors, neutron just has to
+// use it somehow, and it can ditch if it wants
+
 #[repr(C)]
 pub struct ArcServices {
     paging: PageTableTTBR1,
@@ -126,7 +141,7 @@ pub fn make_default() -> DefaultServices {
     let device = ArcDevice::new(DeviceType::DRAM, 0);
     let devices = vec![device];
     let memory_map = MemoryMap::default();
-    let service = ArcServices::new(PageTableTTBR1 {}, devices, memory_map, 0x0);
+    let service = ArcServices::new(PageTableTTBR1::new(0x4000_0000), devices, memory_map, 0x0);
 
     service
 }
