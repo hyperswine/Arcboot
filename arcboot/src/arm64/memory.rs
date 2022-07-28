@@ -439,18 +439,25 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
     initialise_l0_table(free_frame_for_ttbr1);
 
     // map 16 pages from high
+    // setup kernel stack
     map_region_ttbr1(
         KERNEL_BOOT_STACK_START - 16 * PAGE_SIZE as u64,
         KERNEL_BOOT_STACK_PAGES as u64,
         &mut free_frames,
     );
+    // setup kernel heap
     map_region_ttbr1(
         KERNEL_BOOT_HEAP_START,
         KERNEL_BOOT_HEAP_PAGES as u64,
         &mut free_frames,
     );
+    // setup kernel DMA addr space (for kernel buffers only. If using userspace buffers, use your own or do zero-copy here)
+
+    // setup kernel MMIO addr space (for mapping MMIO and config spaces to)
 
     // after kernel pages are setup, idk
+    // is it possible to reset stack pointer? We would prob lose access to all the memory we used after setting this up
+    // actually right at disable mmu.. so maybe zero the pages first? or zero everything we used af...
 }
 
 // ------------------
