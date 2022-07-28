@@ -266,42 +266,68 @@ pub fn get_output_addr_block(base_pt_addr: u64, l_index: u64) -> Option<u64> {
     }
 }
 
+pub const N_PAGES_IN_TABLE: u64 = 512;
+
+// Could use macros here
+
 /// If there is already a table there, it will overwrite it. So make sure you dont do something dumb
 /// Returns the PAddr of the new table start (NOT NEEDED, but oh well)
-pub fn make_page_table(free_frame: u64) -> u64 {
+pub fn make_page_table(free_frame: u64) {
     // create an l1 table and update that descriptor
-    let frame_addr = (free_frame * PAGE_SIZE as u64) as *mut u64;
-    pub const N_PAGES_IN_TABLE: u64 = 512;
+    let frame_addr = free_frame * PAGE_SIZE as u64;
 
     // start writing to it in unsafe
     unsafe {
         // for each page (0..2^9), set all entries to default table descriptors that are invalid
-        for page_number in 0..2_u64.pow(9) {
+        for page_number in 0..N_PAGES_IN_TABLE {
             let unmapped_desc = default_unmapped_table_descriptor();
-            core::ptr::write_volatile(frame_addr, unmapped_desc.0);
+            core::ptr::write_volatile((frame_addr + page_number * 8) as *mut u64, unmapped_desc.0);
         }
     }
-
-    free_frame
 }
 
-/// Makes new table and points prev descriptor at it
+pub fn make_block_table(free_frame: u64)  {
+    let frame_addr = free_frame * PAGE_SIZE as u64;
+
+    unsafe {
+        for page_number in 0..N_PAGES_IN_TABLE {
+            let unmapped_desc = default_unmapped_block_descriptor();
+            core::ptr::write_volatile((frame_addr + page_number * 8) as *mut u64, unmapped_desc.0);
+        }
+    }
+}
+
+/// Makes new table and points prev tabledescriptor at it
 /// Can be used to setup l0
 pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u64) {
     // create an l1 table and update that descriptor
     // POINT THE ORIGINAL L0 ENTRY TO NEW as well. Pass L0 entry u64 addr to it?
     // Point and set to valid basically, for entry curr-1
     make_page_table(table_frame);
-    let mut l0_desc = TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
+    let mut prev_desc = TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
     // set valid and next_level_table_flags
-    l0_desc.set_valid(true);
-    l0_desc.set_next_lvl_table_addr(table_frame);
+    prev_desc.set_valid(true);
+    prev_desc.set_next_lvl_table_addr(table_frame);
 
     // write volatile to point at new table addr
     unsafe {
-        core::ptr::write_volatile(table_frame as *mut u64, l0_desc.0);
+        core::ptr::write_volatile(table_frame as *mut u64, prev_desc.0);
     }
 }
+
+/// Sets up the block table and returns a pointer to the address of the target descriptor? Or maybe do that there
+// pub fn setup_block_table(target_addr: u64, table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u64) {
+//     make_page_table(table_frame);
+//     let mut prev_desc = BlockDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
+//     // set valid and next_level_table_flags
+//     prev_desc.set_valid(true);
+//     prev_desc.set_output_addr(table_frame);
+
+//     // write volatile to point at new table addr
+//     unsafe {
+//         core::ptr::write_volatile(table_frame as *mut u64, prev_desc.0);
+//     }
+// }
 
 /// Turn an address base to a page numbe
 pub fn base_addr_to_page_number(addr: u64) -> u64 {
@@ -319,6 +345,7 @@ pub fn map_region_ttbr1<const N: usize>(
 
     for page in 0..n_pages {
         // attempt to map a frame (should prob return Option?)
+        // to the page
         let frame_number = free_frames.pop();
 
         // this is the vaddr. NOTE: should have 16 1's from MSB
@@ -338,11 +365,9 @@ pub fn map_region_ttbr1<const N: usize>(
         // FOR NOW: if one of the levels returns Option::None, make the descriptor using another free frame
 
         let l0_index = actual_vaddr.l0_index();
-        // What if base table wasnt mapped? Or encountered?
-        let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
-        // damn, ok maybe get the index as well from get_next_lvl_table
-        // frame number = table base_addr / 4K
+        // Attempt to get L1 table
+        let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
         let (l2_table_addr, l1_base_addr) = match l1_table_addr {
             Some(l) => (
@@ -366,14 +391,27 @@ pub fn map_region_ttbr1<const N: usize>(
             ),
             None => {
                 let table_frame = free_frames.pop();
+                // wait, since L3 entries are BlockDescriptor4K, use those
                 setup_table(table_frame, base_pt_addr, l0_index);
+                // so you need to point the descriptor to frame
+
                 (None, table_frame)
             }
         };
 
-        // NOW, get the output addr (since L3 entries are block descriptors)
-        // based on if l3 is even mapped. I think UEFI should zero out..? Or at least ensure the free pages have valid = false?
-        // let output_addr = get_output_addr_block(base_pt_addr, l3_table_addr);
+        // so you set up the l3 table now, at l3_table_addr
+        // now its time to point the descriptor at the output addr frame
+        let output_frame_addr = frame_number * PAGE_SIZE as u64;
+        let l3_base_addr = l3_table_addr.0.unwrap();
+        let descriptor_addr = l3_base_addr + actual_vaddr.offset();
+
+        let mut new_block_desc = default_unmapped_block_descriptor();
+        new_block_desc.set_output_addr(output_frame_addr);
+
+        // note that its not a mut u64 so you have to overwrite the entire thing
+        unsafe {
+            core::ptr::write_volatile(descriptor_addr as *mut u64, new_block_desc.0)
+        }
     }
 }
 
@@ -396,6 +434,9 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
     let mut free_frames = FreePages::new(n_pages - 1, [100]);
 
     // rewrite ttbr1
+    // get a free frame
+    let free_frame_for_ttbr1 = free_frames.pop();
+    initialise_l0_table(free_frame_for_ttbr1);
 
     // map 16 pages from high
     map_region_ttbr1(
