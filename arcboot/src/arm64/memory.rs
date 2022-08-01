@@ -426,17 +426,32 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
     // turn off paging and the mmu
     disable_mmu();
 
+    // reset stack pointer to 0x6000_0000, overwriting heap
+    // SP.set(0x6000_0000);
+
     // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr? Nope, 2GB down
 
+    info!("Creating free pages");
+
     // 0x0 and 0xFFFF... should always be reserved vaddrs i think. For specific blocks, not general areas or stack or something
+    let mut pages = [0 as u64; 100];
+    for i in 0..100 {
+        pages[i] = i as u64;
+    }
+
+    info!("Creating free frames...");
 
     let n_pages = 100;
-    let mut free_frames = FreePages::new(n_pages - 1, [100]);
+    let mut free_frames = FreePages::new(n_pages - 1, pages);
+
+    info!("Rewriting TTBR1 L0 base table");
 
     // rewrite ttbr1
     // get a free frame
     let free_frame_for_ttbr1 = free_frames.pop();
     initialise_l0_table(free_frame_for_ttbr1);
+
+    info!("Mapping TTBR1 Region 0...");
 
     // map 16 pages from high
     // setup kernel stack
