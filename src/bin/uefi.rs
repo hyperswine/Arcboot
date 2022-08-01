@@ -24,7 +24,7 @@ use alloc::{
     string::String,
     vec::{self, Vec},
 };
-use arcboot::efi::{acpi::get_acpi_tables, MemoryMapEFI};
+use arcboot::{efi::{acpi::get_acpi_tables, MemoryMapEFI}, arm64::memory::setup_kernel_tables};
 use arcboot::efi::get_mem_map;
 use arcboot::{
     efi::{acpi::AcpiHandle, AlignToMemoryDescriptor},
@@ -243,6 +243,10 @@ fn efi_main(image: Handle, mut system_table: SystemTable<Boot>) -> Status {
     // info!("TTBR0 EL2 = {mem:#b}\n");
 
     info!("Setting up Arc Memory Protocol...");
+
+    use arcboot_api::MemoryMap;
+    let memory_map = MemoryMap::default();
+    setup_kernel_tables(memory_map);
 
     // Maybe setup memory in the kernel. Could then hand off mmap_storage to the kernel to give it an idea of the memory map
     // st.set_virtual_address_map(map, new_system_table_virtual_addr); Or use a custom format
