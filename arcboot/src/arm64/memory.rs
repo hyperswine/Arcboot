@@ -276,6 +276,8 @@ pub fn make_page_table(free_frame: u64) {
     // create an l1 table and update that descriptor
     let frame_addr = free_frame * PAGE_SIZE as u64;
 
+    info!("Making page table at address: {frame_addr}");
+
     // start writing to it in unsafe
     unsafe {
         // for each page (0..2^9), set all entries to default table descriptors that are invalid
@@ -286,7 +288,7 @@ pub fn make_page_table(free_frame: u64) {
     }
 }
 
-pub fn make_block_table(free_frame: u64)  {
+pub fn make_block_table(free_frame: u64) {
     let frame_addr = free_frame * PAGE_SIZE as u64;
 
     unsafe {
@@ -300,6 +302,8 @@ pub fn make_block_table(free_frame: u64)  {
 /// Makes new table and points prev tabledescriptor at it
 /// Can be used to setup l0
 pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u64) {
+    info!("Setting up new table at frame {table_frame}");
+
     // create an l1 table and update that descriptor
     // POINT THE ORIGINAL L0 ENTRY TO NEW as well. Pass L0 entry u64 addr to it?
     // Point and set to valid basically, for entry curr-1
@@ -308,6 +312,8 @@ pub fn setup_table(table_frame: u64, prev_base_pt_addr: u64, prev_desc_index: u6
     // set valid and next_level_table_flags
     prev_desc.set_valid(true);
     prev_desc.set_next_lvl_table_addr(table_frame);
+
+    info!("Writing to {table_frame}");
 
     // write volatile to point at new table addr
     unsafe {
@@ -348,6 +354,8 @@ pub fn map_region_ttbr1<const N: usize>(
         // to the page
         let frame_number = free_frames.pop();
 
+        info!("Attempting to map frame {frame_number} to page {page}");
+
         // this is the vaddr. NOTE: should have 16 1's from MSB
         let mut vaddr_start = region_start + page * PAGE_SIZE as u64;
         // ensure addr will be a TTBR1 addr
@@ -356,7 +364,10 @@ pub fn map_region_ttbr1<const N: usize>(
         let actual_vaddr = VAddr48_4K(vaddr_start);
 
         // walk the table to map each index
+        // ! set up TTBR1 earlier, so you can use this
         let base_pt_addr = ttbr1();
+
+        info!("Getting TTBR1 base addr = {base_pt_addr}");
 
         // l0 index (47..39)
 
@@ -366,14 +377,21 @@ pub fn map_region_ttbr1<const N: usize>(
 
         let l0_index = actual_vaddr.l0_index();
 
+        info!("Attempting to get L1 table base addr...");
+
         // Attempt to get L1 table
         let l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
 
+        info!("Attempting to get L2 table base addr...");
+
         let (l2_table_addr, l1_base_addr) = match l1_table_addr {
-            Some(l) => (
-                get_next_lvl_table(base_pt_addr, l),
-                base_addr_to_page_number(base_pt_addr),
-            ),
+            Some(l) => {
+                info!("Next Level Table Found!");
+                (
+                    get_next_lvl_table(base_pt_addr, l),
+                    base_addr_to_page_number(base_pt_addr),
+                )
+            }
             None => {
                 // create an l1 table and update that descriptor
                 let table_frame = free_frames.pop();
@@ -383,6 +401,8 @@ pub fn map_region_ttbr1<const N: usize>(
                 (None, table_frame)
             }
         };
+
+        info!("Attempting to get L3 table base addr...");
 
         let l3_table_addr = match l2_table_addr {
             Some(l) => (
@@ -399,6 +419,8 @@ pub fn map_region_ttbr1<const N: usize>(
             }
         };
 
+        info!("Attempting to get output frame addr...");
+
         // so you set up the l3 table now, at l3_table_addr
         // now its time to point the descriptor at the output addr frame
         let output_frame_addr = frame_number * PAGE_SIZE as u64;
@@ -409,9 +431,7 @@ pub fn map_region_ttbr1<const N: usize>(
         new_block_desc.set_output_addr(output_frame_addr);
 
         // note that its not a mut u64 so you have to overwrite the entire thing
-        unsafe {
-            core::ptr::write_volatile(descriptor_addr as *mut u64, new_block_desc.0)
-        }
+        unsafe { core::ptr::write_volatile(descriptor_addr as *mut u64, new_block_desc.0) }
     }
 }
 
@@ -431,18 +451,25 @@ pub fn setup_kernel_tables(memory_map: MemoryMap) {
 
     // get all the Standard memory regions and map them to the same kernel virt addr range. after 2GB vaddr? Nope, 2GB down
 
-    info!("Creating free pages");
+    info!("Creating a stack of free frames based on memory map...");
 
     // 0x0 and 0xFFFF... should always be reserved vaddrs i think. For specific blocks, not general areas or stack or something
-    let mut pages = [0 as u64; 100];
-    for i in 0..100 {
-        pages[i] = i as u64;
+    let n_pages = 1000;
+
+    let mut pages = [0x4000_0000 as u64; 1000];
+    for i in 0..1000 {
+        pages[i] += (PAGE_SIZE * i) as u64;
     }
 
-    info!("Creating free frames...");
-
-    let n_pages = 100;
     let mut free_frames = FreePages::new(n_pages - 1, pages);
+
+    // should prob pop off 0x4000_0000 for it, or use recursive
+    let ttbr1_base_addr = 0x4000_0000;
+    info!("Resetting TTBR1 addr to {ttbr1_base_addr}");
+    TTBR1_EL1.set(ttbr1_base_addr);
+    // zero it
+    let ttbr1_frame_number = 0x4000_0000 / 0x1000;
+    make_page_table(ttbr1_frame_number);
 
     info!("Rewriting TTBR1 L0 base table");
 
