@@ -21,7 +21,7 @@ tock-registers = "0.7.0"
 acpi = { version = "4.1.0", optional = true }
 
 [features]
-default = []
+default = ["api"]
 api = ["arcboot_api", "arcboot_macros"]
 uefi_support = ["arcboot/uefi_support", "dep:acpi"]
 # link this for the most part, unless you want to link against some other allocator
