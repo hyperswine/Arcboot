@@ -62,13 +62,16 @@ bitfield! {
 }
 
 pub fn default_unmapped_table_descriptor() -> TableDescriptor4K {
-    let res = TableDescriptor4K(0);
+    let mut res = TableDescriptor4K(0);
+    // just in case, it should be 0 anway
+    res.set_valid(false);
 
     res
 }
 
 pub fn default_unmapped_block_descriptor() -> BlockDescriptor4K {
-    let res = BlockDescriptor4K(0);
+    let mut res = BlockDescriptor4K(0);
+    res.set_valid(false);
 
     res
 }
@@ -163,8 +166,7 @@ fn set_up_mair() {
     );
 }
 
-/// Configure stage 1 of EL1 translation (TTBR1) for KERNEL
-/// NOTE: Arcboot will also use TTBR1 (since they are both on and TTBR0 is meant for EL0)
+/// Configure stage 1 of EL1 translation (TTBR1) for KERNEL. NOTE: Arcboot will also use TTBR1 (since they are both on and TTBR0 is meant for EL0)
 fn configure_translation_control() {
     let t1sz = 16;
 
@@ -256,12 +258,13 @@ pub const KERNEL_BOOT_HEAP_START: u64 = 0x0000_FFFF_FFFF_FFFF;
 pub const KERNEL_BOOT_HEAP_PAGES: usize = 16;
 
 pub fn get_table_desc(base_addr: u64, index: u64) -> u64 {
+    let level_descriptor_addr = (base_addr + index * 8) as *mut u64;
+    info!("Address to read from for a descriptor = {level_descriptor_addr:?}");
+
     unsafe {
         // maybe encapsulate this logic into walk_table(base_addr, index) -> u64
-        let level_descriptor_addr = (base_addr + index * 8) as *const u64;
-        let level_descriptor = core::ptr::read_volatile(level_descriptor_addr);
-
-        level_descriptor
+        // Ok maybe the lack of MMU is screwing this up, or something...?
+        core::ptr::read_volatile(level_descriptor_addr)
     }
 }
 
@@ -300,23 +303,26 @@ pub enum TableType {
 pub fn make_table(base_frame_addr: u64, table_type: TableType) {
     info!("Making page table at address: {base_frame_addr:#01x}");
 
-    unsafe {
-        // for each page (0..2^9), set all entries to default table descriptors that are invalid
-        for page_number in 0..N_PAGES_IN_TABLE {
-            let unmapped_desc = match table_type {
-                TableType::Block => default_unmapped_table_descriptor().0,
-                TableType::Table => default_unmapped_block_descriptor().0,
-            };
+    let clean_descriptor = match table_type {
+        TableType::Block => default_unmapped_block_descriptor().0,
+        TableType::Table => default_unmapped_table_descriptor().0,
+    };
 
+    // for each page (0->511), set all entries to clean table descriptors
+    for page_number in 0..N_PAGES_IN_TABLE {
+        // info!("Page index {page_number}, dest addr = {:#01X}", base_frame_addr + page_number * 8);
+        unsafe {
             core::ptr::write_volatile(
                 (base_frame_addr + page_number * 8) as *mut u64,
-                unmapped_desc,
+                clean_descriptor,
             );
         }
     }
+
+    // info!("Done making a page table!");
 }
 
-/// Makes new table and points prev tabledescriptor at it. Can be used to setup l0-2. For L3, use setup_block_table
+/// Makes new table and points prev table's descriptor at it. Can be used to setup l0-2. For L3, use setup_block_table. Also returns the addr to new table
 pub fn setup_table(
     frame_number: u64,
     prev_base_pt_addr: u64,
@@ -325,32 +331,34 @@ pub fn setup_table(
 ) {
     info!("Setting up new table at frame {frame_number}");
     let frame_addr = 0x4000_0000 + (frame_number * PAGE_SIZE as u64);
-    info!("Which is at frame addr {frame_addr}");
+    info!("Which is at frame addr {frame_addr:#01X}");
 
     make_table(frame_addr, table_type);
 
+    info!("Matching table type...");
+
     let desc = match table_type {
         TableType::Block => {
+            // wait a min, no no no. When you are doing L3, you are still setting table desc, not block..
+            info!("Getting the base descriptor and creating a block desc...");
             let mut prev_desc =
                 BlockDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
             prev_desc.set_valid(true);
-            // set L2 entry to point at this
             prev_desc.set_output_addr(frame_addr);
+            info!("Writing to address {frame_addr:#01x} the new descriptor {prev_desc:?}");
             prev_desc.0
         }
         TableType::Table => {
+            info!("Getting the base descriptor and creating a table desc...");
             let mut prev_desc =
                 TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
             prev_desc.set_valid(true);
             prev_desc.set_next_lvl_table_addr(frame_addr);
+            info!("Writing to address {frame_addr:#01x} the new descriptor {prev_desc:?}");
             prev_desc.0
         }
     };
 
-    info!(
-        "Writing to address {frame_addr:#01x} the new descriptor {:?}",
-        desc
-    );
     unsafe {
         core::ptr::write_volatile(prev_base_pt_addr as *mut u64, desc);
     }
@@ -360,13 +368,6 @@ pub fn setup_table(
 #[inline(always)]
 pub fn base_addr_to_page_number(addr: u64) -> u64 {
     addr / PAGE_SIZE as u64
-}
-
-pub fn base_addr_to_page_number_and_index(addr: u64) -> u64 {
-    let number = addr as f32 / PAGE_SIZE as f32;
-    // basically, get the floor of float division I think
-    // TODO: either do this or redo..
-    0
 }
 
 pub enum OverwritePolicy {
@@ -397,12 +398,16 @@ pub fn map_region_ttbr1<const N: usize>(
         vaddr_start = vaddr_start | 0xFFFF_0000_0000_0000;
         let actual_vaddr = VAddr48_4K(vaddr_start);
         let l0_index = actual_vaddr.l0_index();
+        let l1_index = actual_vaddr.l1_index();
+        let l2_index = actual_vaddr.l2_index();
+        let l3_index = actual_vaddr.l3_index();
 
-        let possible_l1_table_addr = get_next_lvl_table(base_pt_addr, l0_index);
+        let possible_l1_table_frame = get_next_lvl_table(base_pt_addr, l0_index);
 
-        // How do I refactor this?
+        // how do i uhh get the index of the descriptor?
+        // actual_vaddr.l1_index();
 
-        let (possible_l2_table_addr, l1_base_addr) = match possible_l1_table_addr {
+        let (possible_l2_table_frame, l1_base_addr) = match possible_l1_table_frame {
             Some(l) => {
                 info!("Found L1 Table!");
                 (
@@ -417,11 +422,11 @@ pub fn map_region_ttbr1<const N: usize>(
                 setup_table(table_frame_number, base_pt_addr, l0_index, TableType::Table);
 
                 // return the next one, which is unmapped
-                (None, table_frame_number)
+                (None, page_number_to_addr_4K(table_frame_number))
             }
         };
 
-        let (possible_l3_table_addr, l2_base_addr) = match possible_l2_table_addr {
+        let (possible_l3_table_frame, l2_base_addr) = match possible_l2_table_frame {
             Some(l) => {
                 info!("Found L2 table!");
                 (
@@ -432,16 +437,13 @@ pub fn map_region_ttbr1<const N: usize>(
             None => {
                 info!("Couldnt find L2, creating a new L2 table...");
                 let table_frame_number = free_frames.pop();
-                // wait, since L3 entries are BlockDescriptor4K, use those
-                // ! uh its not base_pt_addr or l0_index. Its the prev table addr and pointer
-                setup_table(table_frame_number, l1_base_addr, l0_index, TableType::Table);
-                // so you need to point the descriptor to frame
+                setup_table(table_frame_number, l1_base_addr, l1_index, TableType::Table);
 
-                (None, table_frame_number)
+                (None, page_number_to_addr_4K(table_frame_number))
             }
         };
 
-        let l3_base_addr = match possible_l3_table_addr {
+        let l3_base_addr = match possible_l3_table_frame {
             Some(l3) => {
                 info!("Found L3 table!");
                 l3
@@ -449,15 +451,22 @@ pub fn map_region_ttbr1<const N: usize>(
             None => {
                 info!("Couldnt find L3, creating a new L3 table...");
                 let table_frame_number = free_frames.pop();
-                // setup_block_table(table_frame_number, prev_base_pt_addr, prev_desc_index);
+                setup_table(table_frame_number, l2_base_addr, l2_index, TableType::Block);
 
-                0
+                page_number_to_addr_4K(table_frame_number)
             }
         };
 
         // so you set up the l3 table now, at l3_table_addr. Now its time to point the descriptor at the output addr frame
-        let output_frame_addr = frame_number * PAGE_SIZE as u64;
-        let l3_descriptor_addr = l3_base_addr + actual_vaddr.offset();
+        // wait the free pages .pop_addr() has +0x4000_0000 offset though? So maybe I shouldnt of?
+        // wait what about the offset?? That should tell us the actual frame number, right?
+        // I dont think the offset matters when you are just mapping the pages
+        // let vaddr_offset_val = actual_vaddr.offset();
+
+        let output_frame_addr = 0x4000_0000 + (frame_number * PAGE_SIZE as u64);
+        // uhh... no its the actual entry number
+        let l3_descriptor_addr = l3_base_addr + (l3_index * 8);
+        info!("Table walk complete. Mapping the output frame addr {output_frame_addr:#X}");
 
         let mut new_block_desc = default_unmapped_block_descriptor();
         new_block_desc.set_output_addr(output_frame_addr);
