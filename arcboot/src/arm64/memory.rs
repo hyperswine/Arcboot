@@ -226,8 +226,12 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
     // Switch MMU on. Ensure the MMU init instruction is executed after everything else
     barrier::isb(barrier::SY);
 
+    // ok so it got up here I think...
+    // what do you do next, reset arcboot's data structures?
+
     // Enable the MMU + data + instruction caching
-    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    // ! for now, set to non cacheable
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::NonCacheable + SCTLR_EL1::I::NonCacheable);
 
     barrier::isb(barrier::SY);
 
@@ -270,12 +274,15 @@ pub fn get_table_desc(base_addr: u64, index: u64) -> u64 {
 
 /// For L0-L2 Page Tables. Also returns the actual frame number of the table
 pub fn get_next_lvl_table(base_pt_addr: u64, l_index: u64) -> Option<u64> {
+    info!("base_ptr_addr = {base_pt_addr}, l_index = {l_index}");
     let level_descriptor = TableDescriptor4K(get_table_desc(base_pt_addr, l_index));
 
     // if valid, return Some & decode descriptor's addr that it points to
     if level_descriptor.valid() {
+        info!("Descriptor is valid");
         Some(level_descriptor.next_lvl_table_addr())
     } else {
+        info!("Descriptor is is invalid!!");
         None
     }
 }
@@ -337,27 +344,14 @@ pub fn setup_table(
 
     info!("Matching table type...");
 
-    let desc = match table_type {
-        TableType::Block => {
-            // wait a min, no no no. When you are doing L3, you are still setting table desc, not block..
-            info!("Getting the base descriptor and creating a block desc...");
-            let mut prev_desc =
-                BlockDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
-            prev_desc.set_valid(true);
-            prev_desc.set_output_addr(frame_addr);
-            info!("Writing to address {frame_addr:#01x} the new descriptor {prev_desc:?}");
-            prev_desc.0
-        }
-        TableType::Table => {
-            info!("Getting the base descriptor and creating a table desc...");
-            let mut prev_desc =
-                TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
-            prev_desc.set_valid(true);
-            prev_desc.set_next_lvl_table_addr(frame_addr);
-            info!("Writing to address {frame_addr:#01x} the new descriptor {prev_desc:?}");
-            prev_desc.0
-        }
-    };
+    // for L3, the prev table is still "Table"
+
+    info!("Getting the base descriptor and creating a table desc...");
+    let mut prev_desc = TableDescriptor4K(get_table_desc(prev_base_pt_addr, prev_desc_index));
+    prev_desc.set_valid(true);
+    prev_desc.set_next_lvl_table_addr(frame_addr);
+    info!("Writing to address {frame_addr:#01x} the new descriptor {prev_desc:?}");
+    let desc = prev_desc.0;
 
     unsafe {
         core::ptr::write_volatile(prev_base_pt_addr as *mut u64, desc);
@@ -389,11 +383,10 @@ pub fn map_region_ttbr1<const N: usize>(
     info!("Got TTBR1 base addr = {base_pt_addr}");
 
     for page in 0..n_pages {
-        // attempt to map a frame (should prob return Option?) to the page
         let frame_number = free_frames.pop();
         info!("Attempting to map page number {page} to a free frame {frame_number}");
 
-        // this is the vaddr. NOTE: should have 16 1's from MSB to ensure addr will be a TTBR1 addr
+        // TTBR1 addresses should have 16 1's from MSB
         let mut vaddr_start = region_start + page * PAGE_SIZE as u64;
         vaddr_start = vaddr_start | 0xFFFF_0000_0000_0000;
         let actual_vaddr = VAddr48_4K(vaddr_start);
@@ -404,14 +397,14 @@ pub fn map_region_ttbr1<const N: usize>(
 
         let possible_l1_table_frame = get_next_lvl_table(base_pt_addr, l0_index);
 
-        // how do i uhh get the index of the descriptor?
-        // actual_vaddr.l1_index();
+        // maybe return an enum instead
 
         let (possible_l2_table_frame, l1_base_addr) = match possible_l1_table_frame {
             Some(l) => {
+                // how do I get the index? just l1? or l0?
                 info!("Found L1 Table!");
                 (
-                    get_next_lvl_table(base_pt_addr, l),
+                    get_next_lvl_table(l, l1_index),
                     base_addr_to_page_number(base_pt_addr),
                 )
             }
@@ -430,7 +423,7 @@ pub fn map_region_ttbr1<const N: usize>(
             Some(l) => {
                 info!("Found L2 table!");
                 (
-                    get_next_lvl_table(l1_base_addr, l),
+                    get_next_lvl_table(l, l2_index),
                     base_addr_to_page_number(l1_base_addr),
                 )
             }
@@ -443,12 +436,15 @@ pub fn map_region_ttbr1<const N: usize>(
             }
         };
 
+        // here, we just return l3 instead of the "next" level which would just be the frame itself
+
         let l3_base_addr = match possible_l3_table_frame {
             Some(l3) => {
                 info!("Found L3 table!");
                 l3
             }
             None => {
+                // maybe we dont have to reset L3?
                 info!("Couldnt find L3, creating a new L3 table...");
                 let table_frame_number = free_frames.pop();
                 setup_table(table_frame_number, l2_base_addr, l2_index, TableType::Block);
@@ -470,6 +466,7 @@ pub fn map_region_ttbr1<const N: usize>(
 
         let mut new_block_desc = default_unmapped_block_descriptor();
         new_block_desc.set_output_addr(output_frame_addr);
+        new_block_desc.set_valid(true);
 
         // note that its not a mut u64 so you have to overwrite the entire thing
         unsafe { core::ptr::write_volatile(l3_descriptor_addr as *mut u64, new_block_desc.0) }
