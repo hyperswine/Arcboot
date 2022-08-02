@@ -159,10 +159,12 @@ pub fn page_number_to_addr_4K(number: u64) -> u64 {
 
 /// Setup MAIR_EL1 for memory attributes like writeback/writethrough and nGnRE
 fn set_up_mair() {
+    // maybe something with these attributes?
+    // I set it to no early write ack
     MAIR_EL1.write(
         MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc
             + MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc
-            + MAIR_EL1::Attr0_Device::nonGathering_nonReordering_EarlyWriteAck,
+            + MAIR_EL1::Attr0_Device::nonGathering_nonReordering_noEarlyWriteAck,
     );
 }
 
@@ -182,7 +184,7 @@ fn configure_translation_control() {
             + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
             + TCR_EL1::EPD1::EnableTTBR1Walks
             // enable instead of disable, addresses depends on 1s or 0s
-            + TCR_EL1::EPD0::EnableTTBR0Walks
+            + TCR_EL1::EPD0::DisableTTBR0Walks
             + TCR_EL1::A1::TTBR1
             + TCR_EL1::T1SZ.val(t1sz),
     );
@@ -211,10 +213,10 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
     // Prepare the memory attribute indirection register
     set_up_mair();
 
-    info!("Setting TTBR1...");
-
+    // JUST SET BEFOREHAND!
+    // info!("Setting TTBR1...");
     // Set TTBR1
-    TTBR1_EL1.set_baddr(phys_tables_base_addr);
+    // TTBR1_EL1.set_baddr(phys_tables_base_addr);
 
     info!("Setting TCR_EL1...");
 
@@ -230,8 +232,8 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
     // what do you do next, reset arcboot's data structures?
 
     // Enable the MMU + data + instruction caching
-    // ! for now, set to non cacheable
-    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::NonCacheable + SCTLR_EL1::I::NonCacheable);
+    // for now, set to non cacheable?
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
 
     barrier::isb(barrier::SY);
 
@@ -242,7 +244,7 @@ pub unsafe fn enable_mmu_and_caching(phys_tables_base_addr: u64) -> Result<(), &
 
 pub fn setup() {
     unsafe {
-        let res = enable_mmu_and_caching(0x4000_1000);
+        let res = enable_mmu_and_caching(ttbr1());
         match res {
             Ok(r) => info!("MMU enabled successfully!"),
             Err(err) => panic!("MMU could not be started! Error = {err}"),
