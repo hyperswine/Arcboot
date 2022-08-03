@@ -11,7 +11,7 @@ acpi = { version = "4.1.0", optional = true }
 embedded-hal = "0.2.7"
 log = { version = "0.4.17", default-features = false }
 tock-registers = "0.7.0"
-goblin = { version = "0.5.2", default-features = false, features = [
+goblin = { version = "0.5.3", default-features = false, features = [
     "elf64",
     "elf32",
     "archive",
