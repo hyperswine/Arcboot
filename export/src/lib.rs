@@ -108,16 +108,30 @@ impl Default for MemoryMap {
 // cause you already setup paging and interrupt vectors, neutron just has to
 // use it somehow, and it can ditch if it wants
 
-pub struct ArcMemory {
-
-}
+pub struct ArcMemory {}
 
 #[repr(C)]
 pub struct ArcServices {
     paging: PageTableTTBR1,
     devices: Vec<ArcDevice>,
     memory_map: MemoryMap,
-    interrupt_handler_addr_start: u64,
+    interrupts: ArcInterrupts,
+}
+
+pub type InterruptHandler = fn();
+
+pub struct InterruptArm64 {
+    vector_table_start: u64,
+}
+
+pub struct ArcInterrupts {
+    arm64: InterruptArm64,
+}
+
+impl ArcInterrupts {
+    pub fn new(arm64: InterruptArm64) -> Self {
+        Self { arm64 }
+    }
 }
 
 impl ArcServices {
@@ -125,16 +139,25 @@ impl ArcServices {
         paging: PageTableTTBR1,
         devices: Vec<ArcDevice>,
         memory_map: MemoryMap,
-        interrupt_handler_addr_start: u64,
+        interrupts: ArcInterrupts,
     ) -> Self {
         Self {
             paging,
             devices,
             memory_map,
-            interrupt_handler_addr_start,
+            interrupts,
         }
     }
+
+    pub fn register_interrupt_handler(&mut self, interrupt_id: u64, handler: InterruptHandler) {
+        // cfg aarch64, use the vector table
+    }
 }
+
+// arcboot can allow you to register interrupt handlers
+// but since every arch is kinda different
+// we can maybe try to abstract that into sync, async interrupt handlers
+// and a specific
 
 // DEFAULTS
 
@@ -151,6 +174,25 @@ pub fn make_default() -> DefaultServices {
 
     service
 }
+
+/// Set the stack pointer at a certain location. Which should have been mapped already
+pub fn set_stack(vaddr: u64) {
+    // should be 8-byte aligned
+    if vaddr % 8 != 0 {
+        panic!("set_stack not 8 byte aligned!");
+    }
+
+    // aarch64, set sp
+    #[cfg(target_arch = "aarch64")]
+    {
+        use cortex_a::registers::SP;
+        SP.set(vaddr)
+    }
+}
+
+/// Map a 4K aligned segment to somewhere in TTBR1 VA space
+/// Usually copies from boot stack/heap -> address
+pub fn map_segment(segment: &[u8], vaddr: u64) {}
 
 // ---------------
 // TESTS
